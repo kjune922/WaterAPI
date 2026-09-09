@@ -1,13 +1,12 @@
 package com.kjune922.waterapi.facility;
 
-import org.assertj.core.api.Assertions;
+import com.kjune922.waterapi.service.FacilityService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 @SpringBootTest
 @Transactional

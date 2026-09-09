@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>시설 등록</title>
+</head>
+<body>
+<h1>상하수도 시설 등록</h1>
+
+<form th:action="@{/facilities}"
+      th:object="${facilityForm}"
+      method="post">
+
+    <div>
+        <label for="name">시설 이름</label>
+        <input id="name" type="text" th:field="*{name}">
+        <p th:errors="*{name}"></p>
+    </div>
+
+    <div>
+        <label for="facilityType">시설 유형</label>
+        <select id="facilityType" th:field="*{facilityType}">
+            <option value="">시설 유형 선택</option>
+            <option th:each="type : ${facilityTypes}"
+                    th:value="${type}"
+                    th:text="${type}">
+            </option>
+        </select>
+        <p th:errors="*{facilityType}"></p>
+    </div>
+
+    <div>
+        <label for="location">시설 위치</label>
+        <input id="location" type="text" th:field="*{location}">
+        <p th:errors="*{location}"></p>
+    </div>
+
+    <button type="submit">등록</button>
+    <a th:href="@{/facilities}">목록으로</a>
+</form>
+</body>
+</html>
