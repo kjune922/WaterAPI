@@ -1,8 +1,8 @@
 package com.kjune922.waterapi.inspection;
 
 import com.kjune922.waterapi.facility.Facility;
-import jakarta.annotation.Nullable;
 import jakarta.persistence.*;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
@@ -10,7 +10,7 @@ import java.time.LocalDate;
 
 @Entity
 @Getter
-@NoArgsConstructor
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Table(name = "inspection_reports")
 public class InspectionReport {
 
@@ -41,7 +41,7 @@ public class InspectionReport {
         this.facility = facility;
         this.content = content;
         this.inspectionDate = inspectionDate;
-        this.processingStatus = processingStatus.PENDING;
+        this.processingStatus = ProcessingStatus.PENDING;
     }
 
     private void validateInspectionDate(LocalDate inspectionDate) {
