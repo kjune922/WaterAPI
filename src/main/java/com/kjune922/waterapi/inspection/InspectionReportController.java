@@ -42,7 +42,7 @@ public class InspectionReportController {
     }
 
     @GetMapping("/{id}")
-    public String inspectionDetail(@PathVariable Long id, Model model){
+    public String inspectionDetail(@PathVariable("id") Long id, Model model){
         InspectionReport inspection = inspectionReportService.findInspection(id);
 
         model.addAttribute("inspection", inspection);
