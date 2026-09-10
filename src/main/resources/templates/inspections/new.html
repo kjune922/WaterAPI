@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>점검일지 등록</title>
+</head>
+<body>
+<h1>점검일지 등록</h1>
+
+<form th:action="@{/inspections}"
+      th:object="${inspectionForm}"
+      method="post">
+
+    <div>
+        <label for="facilityId">점검 시설</label>
+
+        <select id="facilityId" th:field="*{facilityId}">
+            <option value="">시설 선택</option>
+
+            <option th:each="facility : ${facilities}"
+                    th:value="${facility.id}"
+                    th:text="${facility.name + ' (' + facility.facilityType + ')'}">
+            </option>
+        </select>
+
+        <p th:errors="*{facilityId}"></p>
+    </div>
+
+    <div>
+        <label for="inspectionDate">점검 일자</label>
+        <input id="inspectionDate"
+               type="date"
+               th:field="*{inspectionDate}">
+
+        <p th:errors="*{inspectionDate}"></p>
+    </div>
+
+    <div>
+        <label for="content">점검 내용</label>
+
+        <textarea id="content"
+                  th:field="*{content}"
+                  rows="8"
+                  cols="50">
+        </textarea>
+
+        <p th:errors="*{content}"></p>
+    </div>
+
+    <button type="submit">등록</button>
+    <a th:href="@{/inspections}">목록으로</a>
+</form>
+</body>
+</html>

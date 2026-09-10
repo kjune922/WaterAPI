@@ -45,7 +45,7 @@ class InspectionReportServiceTest {
     }
 
     @Test
-    void 존재하지않는_시설_점검일지_등록불가(){
+    void 존재하지않는_시설의점검일지_조회불가(){
         assertThatThrownBy(() -> inspectionReportService.registerInspection(
                 999L,
                 "점검 내용",
@@ -55,7 +55,7 @@ class InspectionReportServiceTest {
     }
 
     @Test
-    void 존재하지않는_시설_점검일지_조회불가 () {
+    void 존재하지않는_점검일지_조회불가 () {
         assertThatThrownBy(() -> inspectionReportService.findInspection(999L))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("점검일지를 찾을 수 없습니다.");

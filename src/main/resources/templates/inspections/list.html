@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>점검일지 목록</title>
+</head>
+<body>
+<h1>점검일지 목록</h1>
+
+<a th:href="@{/inspections/new}">새 점검일지 등록</a>
+<a th:href="@{/facilities}">시설 목록</a>
+
+<table border="1">
+    <thead>
+    <tr>
+        <th>ID</th>
+        <th>시설</th>
+        <th>시설 유형</th>
+        <th>점검 일자</th>
+        <th>점검 내용</th>
+        <th>처리 상태</th>
+    </tr>
+    </thead>
+
+    <tbody>
+    <tr th:each="inspection : ${inspections}">
+        <td th:text="${inspection.id}"></td>
+        <td th:text="${inspection.facility.name}"></td>
+        <td th:text="${inspection.facility.facilityType}"></td>
+        <td th:text="${inspection.inspectionDate}"></td>
+        <td th:text="${inspection.content}"></td>
+        <td th:text="${inspection.processingStatus}"></td>
+    </tr>
+
+    <tr th:if="${#lists.isEmpty(inspections)}">
+        <td colspan="6">등록된 점검일지가 없습니다.</td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>
