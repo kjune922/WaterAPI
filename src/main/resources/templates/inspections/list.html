@@ -28,7 +28,11 @@
         <td th:text="${inspection.facility.name}"></td>
         <td th:text="${inspection.facility.facilityType}"></td>
         <td th:text="${inspection.inspectionDate}"></td>
-        <td th:text="${inspection.content}"></td>
+        <td>
+            <a th:href="@{/inspections/{id}(id=${inspection.id})}"
+               th:text="${inspection.content}">
+            </a>
+        </td>
         <td th:text="${inspection.processingStatus}"></td>
     </tr>
 

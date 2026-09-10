@@ -6,10 +6,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 @Controller
 @RequiredArgsConstructor
@@ -42,5 +39,14 @@ public class InspectionReportController {
         inspectionReportService.registerInspection(form.getFacilityId(), form.getContent(), form.getInspectionDate());
 
         return "redirect:/inspections";
+    }
+
+    @GetMapping("/{id}")
+    public String inspectionDetail(@PathVariable Long id, Model model){
+        InspectionReport inspection = inspectionReportService.findInspection(id);
+
+        model.addAttribute("inspection", inspection);
+
+        return "inspections/detail";
     }
 }
