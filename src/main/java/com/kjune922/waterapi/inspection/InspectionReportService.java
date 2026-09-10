@@ -32,6 +32,6 @@ public class InspectionReportService {
 
     public InspectionReport findInspection(Long id) {
         return inspectionReportRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("점검일자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("점검일지를 찾을 수 없습니다."));
     }
 }
