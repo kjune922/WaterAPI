@@ -128,7 +128,7 @@ class InspectionReportControllerTest {
     @Test
     void 점검일지_AI분석_요청() throws Exception {
         mockMvc.perform(post("/inspections/1/analysis"))
-                .andExpect(status().isOk())
+                .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/inspections/1"));
 
         verify(aiAnalysisService).analyzeInspection(1L);
