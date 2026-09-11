@@ -21,7 +21,7 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 
-@WebMvcTest
+@WebMvcTest(FacilityController.class)
 class FacilityControllerTest {
 
     @Autowired
@@ -51,8 +51,9 @@ class FacilityControllerTest {
     void 시설_등록_화면_조회 () throws Exception {
         mockMvc.perform(get("/facilities/new"))
                 .andExpect(status().isOk())
-                .andExpect(view().name("/facilities/new"))
-                .andExpect(model().attributeExists("facilities"));
+                .andExpect(view().name("facilities/new"))
+                .andExpect(model().attributeExists("facilityForm"))
+                .andExpect(model().attributeExists("facilityTypes"));
     }
 
     @Test
