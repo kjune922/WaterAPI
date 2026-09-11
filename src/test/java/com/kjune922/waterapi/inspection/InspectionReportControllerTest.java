@@ -1,5 +1,6 @@
 package com.kjune922.waterapi.inspection;
 
+import com.kjune922.waterapi.analysis.AiAnalysisService;
 import com.kjune922.waterapi.facility.Facility;
 import com.kjune922.waterapi.facility.FacilityType;
 import com.kjune922.waterapi.service.FacilityService;
@@ -30,6 +31,9 @@ class InspectionReportControllerTest {
 
     @MockitoBean
     private FacilityService facilityService;
+
+    @MockitoBean
+    private AiAnalysisService aiAnalysisService;
 
     @Test
     void 점검일지_목록_조회 () throws Exception {
@@ -119,5 +123,14 @@ class InspectionReportControllerTest {
                 .andExpect(model().attributeExists("inspection"));
 
         verify(inspectionReportService).findInspection(1L);
+    }
+
+    @Test
+    void 점검일지_AI분석_요청() throws Exception {
+        mockMvc.perform(post("/inspections/1/analysis"))
+                .andExpect(status().isOk())
+                .andExpect(redirectedUrl("/inspections/1"));
+
+        verify(aiAnalysisService).analyzeInspection(1L);
     }
 }

@@ -1,5 +1,7 @@
 package com.kjune922.waterapi.inspection;
 
+import com.kjune922.waterapi.analysis.AiAnalysis;
+import com.kjune922.waterapi.analysis.AiAnalysisService;
 import com.kjune922.waterapi.service.FacilityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
@@ -15,6 +17,7 @@ public class InspectionReportController {
 
     private final InspectionReportService inspectionReportService;
     private final FacilityService facilityService;
+    private final AiAnalysisService aiAnalysisService;
 
     @GetMapping
     public String inspections(Model model) {
@@ -45,8 +48,18 @@ public class InspectionReportController {
     public String inspectionDetail(@PathVariable("id") Long id, Model model){
         InspectionReport inspection = inspectionReportService.findInspection(id);
 
+        AiAnalysis analysis = aiAnalysisService.findAnalysis(id).orElse(null);
+
+        model.addAttribute("analysis", analysis);
+
         model.addAttribute("inspection", inspection);
 
         return "inspections/detail";
+    }
+
+    @PostMapping("/{id}/analysis")
+    public String analyze(@PathVariable("id") Long id){
+        aiAnalysisService.analyzeInspection(id);
+        return "redirect:/inspections/" + id;
     }
 }

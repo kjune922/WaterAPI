@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -43,8 +44,7 @@ public class AiAnalysisService {
         return aiAnalysisRepository.save(aiAnalysis);
     }
 
-    public AiAnalysis findAnalysis(Long inspectionReportId) {
-        return aiAnalysisRepository.findById(inspectionReportId)
-                .orElseThrow(() -> new IllegalArgumentException("AI 분석 결과를 찾을 수 없습니다."));
+    public Optional<AiAnalysis> findAnalysis(Long inspectionReportId) {
+        return aiAnalysisRepository.findByInspectionReportId(inspectionReportId);
     }
 }

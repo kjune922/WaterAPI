@@ -5,6 +5,7 @@
     <title>점검일지 상세</title>
 </head>
 <body>
+
 <h1>점검일지 상세</h1>
 
 <table border="1">
@@ -46,6 +47,54 @@
     </tbody>
 </table>
 
+<hr>
+
+<h2>AI 분석 결과</h2>
+
+<div th:if="${analysis == null}">
+    <p>아직 AI 분석을 실행하지 않았습니다.</p>
+
+    <form th:action="@{/inspections/{id}/analysis(
+              id=${inspection.id}
+          )}"
+          method="post">
+        <button type="submit">AI 분석 실행</button>
+    </form>
+</div>
+
+<div th:if="${analysis != null}">
+    <table border="1">
+        <tbody>
+        <tr>
+            <th>요약</th>
+            <td th:text="${analysis.summary}"></td>
+        </tr>
+
+        <tr>
+            <th>이상 유형</th>
+            <td th:text="${analysis.abnormalityType}"></td>
+        </tr>
+
+        <tr>
+            <th>위험도</th>
+            <td th:text="${analysis.riskLevel}"></td>
+        </tr>
+
+        <tr>
+            <th>권장 조치</th>
+            <td th:text="${analysis.recommendedAction}"></td>
+        </tr>
+
+        <tr>
+            <th>분석 시각</th>
+            <td th:text="${analysis.analyzedAt}"></td>
+        </tr>
+        </tbody>
+    </table>
+</div>
+
+<br>
 <a th:href="@{/inspections}">목록으로</a>
+
 </body>
 </html>
