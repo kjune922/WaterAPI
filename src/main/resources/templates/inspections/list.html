@@ -5,6 +5,7 @@
     <title>점검일지 목록</title>
 </head>
 <body>
+
 <h1>점검일지 목록</h1>
 
 <a th:href="@{/inspections/new}">새 점검일지 등록</a>
@@ -28,12 +29,14 @@
         <td th:text="${inspection.facility.name}"></td>
         <td th:text="${inspection.facility.facilityType}"></td>
         <td th:text="${inspection.inspectionDate}"></td>
+
         <td>
             <a th:href="@{/inspections/{id}(id=${inspection.id})}"
                th:text="${inspection.content}">
             </a>
         </td>
-        <td th:text="${inspection.processingStatus}"></td>
+
+        <td th:text="${inspection.processingStatus.description}"></td>
     </tr>
 
     <tr th:if="${#lists.isEmpty(inspections)}">
@@ -41,5 +44,6 @@
     </tr>
     </tbody>
 </table>
+
 </body>
 </html>
