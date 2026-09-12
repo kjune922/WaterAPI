@@ -133,4 +133,18 @@ class InspectionReportControllerTest {
 
         verify(aiAnalysisService).analyzeInspection(1L);
     }
+
+    @Test
+    void 점검일지_처리상태를_변경한다() throws Exception {
+        mockMvc.perform(post("/inspections/1/status")
+                        .param("processingStatus", "IN_PROGRESS"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/inspections/1"));
+
+        verify(inspectionReportService)
+                .changeProcessingStatus(
+                        1L,
+                        ProcessingStatus.IN_PROGRESS
+                );
+    }
 }

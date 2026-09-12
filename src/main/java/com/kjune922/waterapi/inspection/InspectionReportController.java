@@ -62,4 +62,18 @@ public class InspectionReportController {
         aiAnalysisService.analyzeInspection(id);
         return "redirect:/inspections/" + id;
     }
+
+    @PostMapping("/{id}/status")
+    public String changeProcessingStatus(
+            @PathVariable("id") Long id,
+            @RequestParam("processingStatus")
+            ProcessingStatus processingStatus
+    ) {
+        inspectionReportService.changeProcessingStatus(
+                id,
+                processingStatus
+        );
+
+        return "redirect:/inspections/" + id;
+    }
 }

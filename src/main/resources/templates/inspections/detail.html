@@ -49,14 +49,30 @@
 
 <hr>
 
+<h2>처리 상태 변경</h2>
+
+<form th:action="@{/inspections/{id}/status(id=${inspection.id})}"
+      method="post">
+
+    <select name="processingStatus">
+        <option th:each="status : ${T(com.kjune922.waterapi.inspection.ProcessingStatus).values()}"
+                th:value="${status}"
+                th:text="${status}"
+                th:selected="${status == inspection.processingStatus}">
+        </option>
+    </select>
+
+    <button type="submit">상태 변경</button>
+</form>
+
+<hr>
+
 <h2>AI 분석 결과</h2>
 
 <div th:if="${analysis == null}">
     <p>아직 AI 분석을 실행하지 않았습니다.</p>
 
-    <form th:action="@{/inspections/{id}/analysis(
-              id=${inspection.id}
-          )}"
+    <form th:action="@{/inspections/{id}/analysis(id=${inspection.id})}"
           method="post">
         <button type="submit">AI 분석 실행</button>
     </form>
@@ -94,6 +110,7 @@
 </div>
 
 <br>
+
 <a th:href="@{/inspections}">목록으로</a>
 
 </body>
