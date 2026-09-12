@@ -2,10 +2,13 @@ package com.kjune922.waterapi.client;
 
 import com.kjune922.waterapi.domain.RiskLevel;
 import com.kjune922.waterapi.dto.InspectionAnalysisResponse;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
 @Component
+@Profile("stub")
 public class StubInspectionAiClient implements InspectionAiClient{
+
     @Override
     public InspectionAnalysisResponse analyze(String inspectionContent) {
         return new InspectionAnalysisResponse(

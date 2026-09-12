@@ -338,3 +338,8 @@ InspectionService
 - API 호출 없이 분석 및 저장 흐름을 테스트할 수 있다.
 
 현재는 호출 규칙을 나타내는 인터페이스만 만들었으며, 실제 OpenAI API 구현체는 이후 단계에서 추가한다.
+
+# RESTCLIENT
+
+- RestClient는 Spring에서 외부 HTTP API를 호출할 때 사용하는 객체.
+- CloudGuard에서 AWS SDK Client를 @Bean으로 등록한거랑 비슷
