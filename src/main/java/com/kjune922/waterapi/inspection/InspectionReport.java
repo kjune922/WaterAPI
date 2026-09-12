@@ -62,4 +62,12 @@ public class InspectionReport {
         }
     }
 
+    // 점검 처리 상태 변경 메소드 추가
+    public void changeProcessingStatus(ProcessingStatus processingStatus){
+        if(processingStatus == null){
+            throw new IllegalArgumentException("처리 상태는 필수입니다.");
+        }
+        this.processingStatus = processingStatus;
+    }
+
 }

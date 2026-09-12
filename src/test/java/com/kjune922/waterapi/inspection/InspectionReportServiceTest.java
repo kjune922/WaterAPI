@@ -61,4 +61,44 @@ class InspectionReportServiceTest {
                 .hasMessage("점검일지를 찾을 수 없습니다.");
     }
 
+    @Test
+    void 점검일지_처리상태를_변경한다() {
+        Facility facility = facilityRepository.save(
+                new Facility(
+                        "2번 펌프",
+                        FacilityType.PUMP,
+                        "부산 정수장"
+                )
+        );
+
+        InspectionReport inspection =
+                inspectionReportService.registerInspection(
+                        facility.getId(),
+                        "펌프 진동이 평소보다 큼",
+                        LocalDate.of(2026, 9, 12)
+                );
+
+        inspectionReportService.changeProcessingStatus(
+                inspection.getId(),
+                ProcessingStatus.IN_PROGRESS
+        );
+
+        InspectionReport changedInspection =
+                inspectionReportService.findInspection(
+                        inspection.getId()
+                );
+
+        assertThat(changedInspection.getProcessingStatus())
+                .isEqualTo(ProcessingStatus.IN_PROGRESS);
+    }
+
+    @Test
+    void 존재하지않는_점검일지_처리상태변경은_불가 () {
+        assertThatThrownBy(() -> inspectionReportService.changeProcessingStatus(
+                990L,
+                ProcessingStatus.COMPLETED
+        )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("점검일지를 찾을 수 없습니다.");
+    }
+
 }
