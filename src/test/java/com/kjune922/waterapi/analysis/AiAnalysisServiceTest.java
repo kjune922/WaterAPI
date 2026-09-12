@@ -14,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -140,5 +141,32 @@ class AiAnalysisServiceTest {
 
         verifyNoInteractions(inspectionAiClient);
         verifyNoInteractions(aiAnalysisRepository);
+    }
+
+    @Test
+    void 위험도로_AI분석_결과_조회() {
+        given(aiAnalysisRepository.findAllByRiskLevel(RiskLevel.WARNING))
+                .willReturn(List.of());
+
+        List<AiAnalysis> result = aiAnalysisService.findAnalysisByRiskLevel(RiskLevel.WARNING);
+
+        assertThat(result).isEmpty();
+
+        verify(aiAnalysisRepository).findAllByRiskLevel(RiskLevel.WARNING);
+    }
+
+    @Test
+    void 위험도_조건이_없으면_AI분석_결과를_전체조회한다() {
+        given(aiAnalysisRepository.findAll())
+                .willReturn(List.of());
+
+        List<AiAnalysis> result =
+                aiAnalysisService.findAnalysisByRiskLevel(null);
+
+        assertThat(result).isEmpty();
+
+        verify(aiAnalysisRepository).findAll();
+        verify(aiAnalysisRepository, never())
+                .findAllByRiskLevel(any());
     }
 }

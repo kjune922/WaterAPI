@@ -1,6 +1,7 @@
 package com.kjune922.waterapi.analysis;
 
 import com.kjune922.waterapi.client.InspectionAiClient;
+import com.kjune922.waterapi.domain.RiskLevel;
 import com.kjune922.waterapi.dto.InspectionAnalysisResponse;
 import com.kjune922.waterapi.inspection.InspectionReport;
 import com.kjune922.waterapi.inspection.InspectionReportRepository;
@@ -9,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Service
@@ -46,5 +48,13 @@ public class AiAnalysisService {
 
     public Optional<AiAnalysis> findAnalysis(Long inspectionReportId) {
         return aiAnalysisRepository.findByInspectionReportId(inspectionReportId);
+    }
+
+    public List<AiAnalysis> findAnalysisByRiskLevel(RiskLevel riskLevel){
+
+        if(riskLevel == null){
+            return aiAnalysisRepository.findAll();
+        }
+        return aiAnalysisRepository.findAllByRiskLevel(riskLevel);
     }
 }
