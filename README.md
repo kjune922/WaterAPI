@@ -343,3 +343,8 @@ InspectionService
 
 - RestClient는 Spring에서 외부 HTTP API를 호출할 때 사용하는 객체.
 - CloudGuard에서 AWS SDK Client를 @Bean으로 등록한거랑 비슷
+
+<실행 테스트 명령어>
+SPRING_PROFILES_ACTIVE=openai ./gradlew.bat bootRun
+
+![img.png](img.png)
