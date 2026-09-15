@@ -31,7 +31,7 @@ public class InspectionReportController {
     {
         Page<InspectionReport> inspections = inspectionReportService.findInspectionPage(processingStatus, pageable);
         model.addAttribute("inspections", inspections);
-        model.addAttribute("processingStatus", ProcessingStatus.values());
+        model.addAttribute("processingStatuses", ProcessingStatus.values());
         model.addAttribute("selectedProcessingStatus", processingStatus);
 
         return "inspections/list";
