@@ -1,8 +1,11 @@
 package com.kjune922.waterapi.inspection;
 
+import com.kjune922.waterapi.analysis.AiAnalysisRepository;
 import com.kjune922.waterapi.facility.Facility;
 import com.kjune922.waterapi.facility.FacilityRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +19,7 @@ public class InspectionReportService {
 
     private final InspectionReportRepository inspectionReportRepository;
     private final FacilityRepository facilityRepository;
+    private final AiAnalysisRepository aiAnalysisRepository;
 
     @Transactional
     public InspectionReport registerInspection(Long facilityId, String content, LocalDate inspectionDate) {
@@ -49,5 +53,27 @@ public class InspectionReportService {
         InspectionReport inspection = inspectionReportRepository.findById(inspectionId)
                 .orElseThrow(() -> new IllegalArgumentException("점검일지를 찾을 수 없습니다."));
         inspection.update(content, inspectionDate);
+
+        aiAnalysisRepository.deleteByInspectionReport_Id(inspectionId);
+    }
+
+    // 점검일지 삭제 메소드 추가
+    @Transactional
+    public void deleteInspection(Long inspectionId) {
+        InspectionReport inspection = inspectionReportRepository.findById(inspectionId)
+                .orElseThrow(() -> new IllegalArgumentException("점검일지를 찾을 수 없습니다."));
+
+        aiAnalysisRepository.deleteByInspectionReport_Id(inspectionId);
+
+        inspectionReportRepository.delete(inspection);
+    }
+
+    // 페이지 조회 메소드 추가
+    @Transactional(readOnly = true)
+    public Page<InspectionReport> findInspectionPage(ProcessingStatus processingStatus, Pageable pageable){
+        if(processingStatus == null) {
+            return inspectionReportRepository.findAll(pageable);
+        }
+        return inspectionReportRepository.findByProcessingStatus(processingStatus, pageable);
     }
 }

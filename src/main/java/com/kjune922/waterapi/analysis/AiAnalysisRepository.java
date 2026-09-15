@@ -21,4 +21,7 @@ public interface AiAnalysisRepository extends JpaRepository<AiAnalysis, Long> {
 
     // 페이지 조회 메소드 추가
     Page<AiAnalysis> findAllByRiskLevel(RiskLevel riskLevel, Pageable pageable);
+
+    // 점검일지 삭제 메소드 추가
+    void deleteByInspectionReport_Id(Long inspectionId);
 }

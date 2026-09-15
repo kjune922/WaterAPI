@@ -8,42 +8,125 @@
 
 <h1>점검일지 목록</h1>
 
-<a th:href="@{/inspections/new}">새 점검일지 등록</a>
-<a th:href="@{/facilities}">시설 목록</a>
+<div>
+    <a th:href="@{/inspections/new}">
+        점검일지 등록
+    </a>
+
+    <a th:href="@{/analyses}">
+        AI 분석 결과
+    </a>
+
+    <a th:href="@{/facilities}">
+        시설 목록
+    </a>
+</div>
+
+<hr>
+
+<h2>처리 상태 필터</h2>
+
+<form th:action="@{/inspections}" method="get">
+    <select name="processingStatus">
+        <option value="">전체</option>
+
+        <option th:each="status : ${processingStatuses}"
+                th:value="${status}"
+                th:text="${status.description}"
+                th:selected="${status == selectedProcessingStatus}">
+        </option>
+    </select>
+
+    <button type="submit">조회</button>
+</form>
+
+<br>
 
 <table border="1">
     <thead>
     <tr>
         <th>ID</th>
-        <th>시설</th>
-        <th>시설 유형</th>
+        <th>시설 이름</th>
         <th>점검 일자</th>
-        <th>점검 내용</th>
         <th>처리 상태</th>
+        <th>점검 내용</th>
+        <th>상세</th>
     </tr>
     </thead>
 
     <tbody>
-    <tr th:each="inspection : ${inspections}">
-        <td th:text="${inspection.id}"></td>
-        <td th:text="${inspection.facility.name}"></td>
-        <td th:text="${inspection.facility.facilityType}"></td>
-        <td th:text="${inspection.inspectionDate}"></td>
-
-        <td>
-            <a th:href="@{/inspections/{id}(id=${inspection.id})}"
-               th:text="${inspection.content}">
-            </a>
+    <tr th:if="${inspections.isEmpty()}">
+        <td colspan="6">
+            조회된 점검일지가 없습니다.
         </td>
-
-        <td th:text="${inspection.processingStatus.description}"></td>
     </tr>
 
-    <tr th:if="${#lists.isEmpty(inspections)}">
-        <td colspan="6">등록된 점검일지가 없습니다.</td>
+    <tr th:each="inspection : ${inspections.content}">
+        <td th:text="${inspection.id}"></td>
+
+        <td th:text="${inspection.facility.name}"></td>
+
+        <td th:text="${inspection.inspectionDate}"></td>
+
+        <td th:text="${inspection.processingStatus.description}">
+        </td>
+
+        <td th:text="${inspection.content}"></td>
+
+        <td>
+            <a th:href="@{/inspections/{id}(id=${inspection.id})}">
+                상세 보기
+            </a>
+        </td>
     </tr>
     </tbody>
 </table>
+
+<br>
+
+<nav th:if="${inspections.totalPages > 0}">
+    <a th:if="${inspections.hasPrevious()}"
+       th:href="@{/inspections(
+            page=${inspections.number - 1},
+            size=${inspections.size},
+            processingStatus=${selectedProcessingStatus}
+       )}">
+        이전
+    </a>
+
+    <span th:each="pageNumber :
+            ${#numbers.sequence(0, inspections.totalPages - 1)}">
+
+        <strong th:if="${pageNumber == inspections.number}"
+                th:text="${pageNumber + 1}">
+        </strong>
+
+        <a th:unless="${pageNumber == inspections.number}"
+           th:href="@{/inspections(
+                page=${pageNumber},
+                size=${inspections.size},
+                processingStatus=${selectedProcessingStatus}
+           )}"
+           th:text="${pageNumber + 1}">
+        </a>
+    </span>
+
+    <a th:if="${inspections.hasNext()}"
+       th:href="@{/inspections(
+            page=${inspections.number + 1},
+            size=${inspections.size},
+            processingStatus=${selectedProcessingStatus}
+       )}">
+        다음
+    </a>
+</nav>
+
+<p th:if="${inspections.totalPages > 0}">
+    현재 페이지:
+    <span th:text="${inspections.number + 1}"></span>
+    /
+    <span th:text="${inspections.totalPages}"></span>
+</p>
 
 </body>
 </html>

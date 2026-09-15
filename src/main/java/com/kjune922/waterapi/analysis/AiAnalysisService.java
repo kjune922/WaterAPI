@@ -25,6 +25,7 @@ public class AiAnalysisService {
     private final AiAnalysisRepository aiAnalysisRepository;
     private final InspectionAiClient inspectionAiClient;
 
+
     @Transactional
     public AiAnalysis analyzeInspection(Long inspectionReportId) {
         InspectionReport inspectionReport = inspectionReportRepository.findById(inspectionReportId)
@@ -69,4 +70,5 @@ public class AiAnalysisService {
 
         return aiAnalysisRepository.findAllByRiskLevel(riskLevel,pageable);
     }
+
 }

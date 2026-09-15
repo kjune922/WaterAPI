@@ -4,6 +4,10 @@ import com.kjune922.waterapi.analysis.AiAnalysis;
 import com.kjune922.waterapi.analysis.AiAnalysisService;
 import com.kjune922.waterapi.service.FacilityService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -20,11 +24,15 @@ public class InspectionReportController {
     private final AiAnalysisService aiAnalysisService;
 
     @GetMapping
-    public String inspections(Model model) {
-        model.addAttribute(
-                "inspections",
-                inspectionReportService.findInspections()
-        );
+    public String inspections(
+            @RequestParam(value = "processingStatus", required = false) ProcessingStatus processingStatus,
+            @PageableDefault(size = 10, sort = {"inspectionDate", "id"}, direction = Sort.Direction.DESC) Pageable pageable,
+            Model model)
+    {
+        Page<InspectionReport> inspections = inspectionReportService.findInspectionPage(processingStatus, pageable);
+        model.addAttribute("inspections", inspections);
+        model.addAttribute("processingStatus", ProcessingStatus.values());
+        model.addAttribute("selectedProcessingStatus", processingStatus);
 
         return "inspections/list";
     }
@@ -155,5 +163,11 @@ public class InspectionReportController {
         );
 
         return "redirect:/inspections/" + id;
+    }
+
+    @PostMapping("/{id}/delete")
+    public String delete(@PathVariable("id") Long id) {
+        inspectionReportService.deleteInspection(id);
+        return "redirect:/inspections";
     }
 }

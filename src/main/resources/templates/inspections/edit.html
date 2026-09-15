@@ -8,6 +8,11 @@
 
 <h1>점검일지 수정</h1>
 
+<p>
+    점검일지를 수정하면 기존 AI 분석 결과가 삭제됩니다.
+    수정 완료 후 다시 AI 분석을 실행해주세요.
+</p>
+
 <form th:action="@{/inspections/{id}/edit(id=${inspectionId})}"
       th:object="${inspectionForm}"
       method="post">
