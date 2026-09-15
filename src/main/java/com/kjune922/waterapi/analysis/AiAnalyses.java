@@ -11,8 +11,8 @@ import java.time.LocalDateTime;
 @Entity
 @Getter
 @NoArgsConstructor
-@Table(name = "ai_analysis")
-public class AiAnalysis {
+@Table(name = "ai_analyses")
+public class AiAnalyses {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -38,7 +38,7 @@ public class AiAnalysis {
     @Column(nullable = false)
     private LocalDateTime analyzedAt;
 
-    public AiAnalysis(InspectionReport inspectionReport, String summary, String abnormalityType, RiskLevel riskLevel, String recommendedAction, LocalDateTime analyzedAt) {
+    public AiAnalyses(InspectionReport inspectionReport, String summary, String abnormalityType, RiskLevel riskLevel, String recommendedAction, LocalDateTime analyzedAt) {
         this.inspectionReport = inspectionReport;
         this.summary = summary;
         this.abnormalityType = abnormalityType;

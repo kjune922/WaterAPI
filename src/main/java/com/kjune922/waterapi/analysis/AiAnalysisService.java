@@ -23,7 +23,7 @@ public class AiAnalysisService {
     private final InspectionAiClient inspectionAiClient;
 
     @Transactional
-    public AiAnalysis analyzeInspection(Long inspectionReportId) {
+    public AiAnalyses analyzeInspection(Long inspectionReportId) {
         InspectionReport inspectionReport = inspectionReportRepository.findById(inspectionReportId)
                 .orElseThrow(() -> new IllegalArgumentException("점검일지를 찾을 수 없습니다."));
 
@@ -34,7 +34,7 @@ public class AiAnalysisService {
 
         InspectionAnalysisResponse response = inspectionAiClient.analyze(inspectionReport.getContent());
 
-        AiAnalysis aiAnalysis = new AiAnalysis(
+        AiAnalyses aiAnalysis = new AiAnalyses(
                 inspectionReport,
                 response.getSummary(),
                 response.getAbnormalityType(),
@@ -46,11 +46,11 @@ public class AiAnalysisService {
         return aiAnalysisRepository.save(aiAnalysis);
     }
 
-    public Optional<AiAnalysis> findAnalysis(Long inspectionReportId) {
+    public Optional<AiAnalyses> findAnalysis(Long inspectionReportId) {
         return aiAnalysisRepository.findByInspectionReportId(inspectionReportId);
     }
 
-    public List<AiAnalysis> findAnalysisByRiskLevel(RiskLevel riskLevel){
+    public List<AiAnalyses> findAnalysisByRiskLevel(RiskLevel riskLevel){
 
         if(riskLevel == null){
             return aiAnalysisRepository.findAll();

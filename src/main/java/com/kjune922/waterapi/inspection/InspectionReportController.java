@@ -1,6 +1,6 @@
 package com.kjune922.waterapi.inspection;
 
-import com.kjune922.waterapi.analysis.AiAnalysis;
+import com.kjune922.waterapi.analysis.AiAnalyses;
 import com.kjune922.waterapi.analysis.AiAnalysisService;
 import com.kjune922.waterapi.service.FacilityService;
 import lombok.RequiredArgsConstructor;
@@ -48,7 +48,7 @@ public class InspectionReportController {
     public String inspectionDetail(@PathVariable("id") Long id, Model model){
         InspectionReport inspection = inspectionReportService.findInspection(id);
 
-        AiAnalysis analysis = aiAnalysisService.findAnalysis(id).orElse(null);
+        AiAnalyses analysis = aiAnalysisService.findAnalysis(id).orElse(null);
 
         model.addAttribute("analysis", analysis);
 

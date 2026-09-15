@@ -71,11 +71,11 @@ class AiAnalysisServiceTest {
                 inspectionReport.getContent()
         )).willReturn(response);
 
-        given(aiAnalysisRepository.save(any(AiAnalysis.class)))
+        given(aiAnalysisRepository.save(any(AiAnalyses.class)))
                 .willAnswer(invocation ->
                         invocation.getArgument(0));
 
-        AiAnalysis result =
+        AiAnalyses result =
                 aiAnalysisService.analyzeInspection(1L);
 
         assertThat(result.getInspectionReport())
@@ -93,7 +93,7 @@ class AiAnalysisServiceTest {
         verify(inspectionAiClient)
                 .analyze(inspectionReport.getContent());
         verify(aiAnalysisRepository)
-                .save(any(AiAnalysis.class));
+                .save(any(AiAnalyses.class));
     }
 
     @Test
@@ -126,7 +126,7 @@ class AiAnalysisServiceTest {
 
         verifyNoInteractions(inspectionAiClient);
         verify(aiAnalysisRepository, never())
-                .save(any(AiAnalysis.class));
+                .save(any(AiAnalyses.class));
     }
 
     @Test
@@ -148,7 +148,7 @@ class AiAnalysisServiceTest {
         given(aiAnalysisRepository.findAllByRiskLevel(RiskLevel.WARNING))
                 .willReturn(List.of());
 
-        List<AiAnalysis> result = aiAnalysisService.findAnalysisByRiskLevel(RiskLevel.WARNING);
+        List<AiAnalyses> result = aiAnalysisService.findAnalysisByRiskLevel(RiskLevel.WARNING);
 
         assertThat(result).isEmpty();
 
@@ -160,7 +160,7 @@ class AiAnalysisServiceTest {
         given(aiAnalysisRepository.findAll())
                 .willReturn(List.of());
 
-        List<AiAnalysis> result =
+        List<AiAnalyses> result =
                 aiAnalysisService.findAnalysisByRiskLevel(null);
 
         assertThat(result).isEmpty();
