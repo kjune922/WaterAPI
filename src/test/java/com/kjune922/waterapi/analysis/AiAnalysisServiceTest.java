@@ -7,6 +7,7 @@ import com.kjune922.waterapi.facility.Facility;
 import com.kjune922.waterapi.facility.FacilityType;
 import com.kjune922.waterapi.inspection.InspectionReport;
 import com.kjune922.waterapi.inspection.InspectionReportRepository;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -22,6 +23,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.*;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 @ExtendWith(MockitoExtension.class)
 class AiAnalysisServiceTest {
@@ -71,11 +77,11 @@ class AiAnalysisServiceTest {
                 inspectionReport.getContent()
         )).willReturn(response);
 
-        given(aiAnalysisRepository.save(any(AiAnalyses.class)))
+        given(aiAnalysisRepository.save(any(AiAnalysis.class)))
                 .willAnswer(invocation ->
                         invocation.getArgument(0));
 
-        AiAnalyses result =
+        AiAnalysis result =
                 aiAnalysisService.analyzeInspection(1L);
 
         assertThat(result.getInspectionReport())
@@ -93,7 +99,7 @@ class AiAnalysisServiceTest {
         verify(inspectionAiClient)
                 .analyze(inspectionReport.getContent());
         verify(aiAnalysisRepository)
-                .save(any(AiAnalyses.class));
+                .save(any(AiAnalysis.class));
     }
 
     @Test
@@ -126,7 +132,7 @@ class AiAnalysisServiceTest {
 
         verifyNoInteractions(inspectionAiClient);
         verify(aiAnalysisRepository, never())
-                .save(any(AiAnalyses.class));
+                .save(any(AiAnalysis.class));
     }
 
     @Test
@@ -148,7 +154,7 @@ class AiAnalysisServiceTest {
         given(aiAnalysisRepository.findAllByRiskLevel(RiskLevel.WARNING))
                 .willReturn(List.of());
 
-        List<AiAnalyses> result = aiAnalysisService.findAnalysisByRiskLevel(RiskLevel.WARNING);
+        List<AiAnalysis> result = aiAnalysisService.findAnalysisByRiskLevel(RiskLevel.WARNING);
 
         assertThat(result).isEmpty();
 
@@ -160,7 +166,7 @@ class AiAnalysisServiceTest {
         given(aiAnalysisRepository.findAll())
                 .willReturn(List.of());
 
-        List<AiAnalyses> result =
+        List<AiAnalysis> result =
                 aiAnalysisService.findAnalysisByRiskLevel(null);
 
         assertThat(result).isEmpty();
@@ -168,5 +174,42 @@ class AiAnalysisServiceTest {
         verify(aiAnalysisRepository).findAll();
         verify(aiAnalysisRepository, never())
                 .findAllByRiskLevel(any());
+    }
+
+    @Test
+    @DisplayName("위험도 조건이 없으면 AI분석 결과를 페이지로 전체조회")
+    void NonRiskLevelFindAll() {
+        Pageable pageable = PageRequest.of(0,10);
+
+        Page<AiAnalysis> page = new PageImpl<>(List.of());
+
+        given(aiAnalysisRepository.findAll(pageable))
+                .willReturn(page);
+
+        Page<AiAnalysis> result = aiAnalysisService.findAnalysisPage(null,pageable);
+
+        assertThat(result).isEmpty();
+
+        verify(aiAnalysisRepository).findAll(pageable);
+        verify(aiAnalysisRepository, never())
+                .findAllByRiskLevel(any(RiskLevel.class), any(Pageable.class));
+    }
+
+    @Test
+    @DisplayName("위험도 조건이 있으면 AI분석 결과를 페이지 조회")
+    void PageReadByRiskLevel() {
+        Pageable pageable = PageRequest.of(0,10);
+        Page<AiAnalysis> page = new PageImpl<>(List.of());
+
+        given(aiAnalysisRepository.findAllByRiskLevel(RiskLevel.WARNING, pageable))
+                .willReturn(page);
+
+        Page<AiAnalysis> result = aiAnalysisService.findAnalysisPage(RiskLevel.WARNING, pageable);
+
+        assertThat(result).isEmpty();
+
+        verify(aiAnalysisRepository).findAllByRiskLevel(RiskLevel.WARNING, pageable);
+
+        verify(aiAnalysisRepository, never()).findAll(any(Pageable.class));
     }
 }

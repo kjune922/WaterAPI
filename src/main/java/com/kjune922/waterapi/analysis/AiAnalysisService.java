@@ -6,6 +6,9 @@ import com.kjune922.waterapi.dto.InspectionAnalysisResponse;
 import com.kjune922.waterapi.inspection.InspectionReport;
 import com.kjune922.waterapi.inspection.InspectionReportRepository;
 import lombok.RequiredArgsConstructor;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +26,7 @@ public class AiAnalysisService {
     private final InspectionAiClient inspectionAiClient;
 
     @Transactional
-    public AiAnalyses analyzeInspection(Long inspectionReportId) {
+    public AiAnalysis analyzeInspection(Long inspectionReportId) {
         InspectionReport inspectionReport = inspectionReportRepository.findById(inspectionReportId)
                 .orElseThrow(() -> new IllegalArgumentException("점검일지를 찾을 수 없습니다."));
 
@@ -34,7 +37,7 @@ public class AiAnalysisService {
 
         InspectionAnalysisResponse response = inspectionAiClient.analyze(inspectionReport.getContent());
 
-        AiAnalyses aiAnalysis = new AiAnalyses(
+        AiAnalysis aiAnalysis = new AiAnalysis(
                 inspectionReport,
                 response.getSummary(),
                 response.getAbnormalityType(),
@@ -46,15 +49,24 @@ public class AiAnalysisService {
         return aiAnalysisRepository.save(aiAnalysis);
     }
 
-    public Optional<AiAnalyses> findAnalysis(Long inspectionReportId) {
+    public Optional<AiAnalysis> findAnalysis(Long inspectionReportId) {
         return aiAnalysisRepository.findByInspectionReportId(inspectionReportId);
     }
 
-    public List<AiAnalyses> findAnalysisByRiskLevel(RiskLevel riskLevel){
+    public List<AiAnalysis> findAnalysisByRiskLevel(RiskLevel riskLevel){
 
         if(riskLevel == null){
             return aiAnalysisRepository.findAll();
         }
         return aiAnalysisRepository.findAllByRiskLevel(riskLevel);
+    }
+
+    // 페이지네이션 구현하는 메소드 추가
+    public Page<AiAnalysis> findAnalysisPage(RiskLevel riskLevel, Pageable pageable){
+        if(riskLevel == null){
+            return aiAnalysisRepository.findAll(pageable);
+        }
+
+        return aiAnalysisRepository.findAllByRiskLevel(riskLevel,pageable);
     }
 }
