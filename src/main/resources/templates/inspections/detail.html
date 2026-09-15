@@ -47,6 +47,12 @@
     </tbody>
 </table>
 
+<br>
+
+<a th:href="@{/inspections/{id}/edit(id=${inspection.id})}">
+    점검일지 수정
+</a>
+
 <hr>
 
 <h2>처리 상태 변경</h2>
@@ -55,7 +61,8 @@
       method="post">
 
     <select name="processingStatus">
-        <option th:each="status : ${T(com.kjune922.waterapi.inspection.ProcessingStatus).values()}"
+        <option th:each="status :
+                ${T(com.kjune922.waterapi.inspection.ProcessingStatus).values()}"
                 th:value="${status}"
                 th:text="${status.description}"
                 th:selected="${status == inspection.processingStatus}">
@@ -93,7 +100,7 @@
 
         <tr>
             <th>위험도</th>
-            <td th:text="${analysis.riskLevel}"></td>
+            <td th:text="${analysis.riskLevel.description}"></td>
         </tr>
 
         <tr>

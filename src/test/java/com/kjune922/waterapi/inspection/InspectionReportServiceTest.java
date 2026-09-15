@@ -4,6 +4,7 @@ import com.kjune922.waterapi.facility.Facility;
 import com.kjune922.waterapi.facility.FacilityRepository;
 import com.kjune922.waterapi.facility.FacilityType;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -98,6 +99,38 @@ class InspectionReportServiceTest {
                 990L,
                 ProcessingStatus.COMPLETED
         )).isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("점검일지를 찾을 수 없습니다.");
+    }
+
+    @Test
+    @DisplayName("점검일지 수정(업데이트)")
+    void update() {
+        Facility facility = facilityRepository.save(new Facility("2번 펌프", FacilityType.PUMP, "부산"));
+
+        InspectionReport inspection = inspectionReportService.registerInspection(
+                facility.getId(),
+                "기존 점검 내용",
+                LocalDate.of(2026,9,10)
+        );
+
+        inspectionReportService.updateInspection(
+                inspection.getId(),
+                "펌프에서 강한 진동이 발생함",
+                LocalDate.of(2026,9,15));
+
+        InspectionReport updatedInspection = inspectionReportService.findInspection(inspection.getId());
+
+        assertThat(updatedInspection.getContent()).isEqualTo("펌프에서 강한 진동이 발생함");
+
+        assertThat(updatedInspection.getInspectionDate()).isEqualTo(LocalDate.of(2026,9,15));
+    }
+
+    @Test
+    @DisplayName("존재하지않는 점검일지 업데이트 불가능")
+    void ifNotExistNoUpdate() {
+        assertThatThrownBy(() -> inspectionReportService.updateInspection(
+                99L, "점검 내용", LocalDate.of(2026,9,15)))
+                .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("점검일지를 찾을 수 없습니다.");
     }
 

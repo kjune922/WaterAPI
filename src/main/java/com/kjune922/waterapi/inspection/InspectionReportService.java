@@ -42,4 +42,12 @@ public class InspectionReportService {
                 .orElseThrow(() -> new IllegalArgumentException("점검일지를 찾을 수 없습니다."));
         inspection.changeProcessingStatus(processingStatus);
     }
+
+    // 점검일지 업데이트 메소드 추가
+    @Transactional
+    public void updateInspection(Long inspectionId, String content, LocalDate inspectionDate){
+        InspectionReport inspection = inspectionReportRepository.findById(inspectionId)
+                .orElseThrow(() -> new IllegalArgumentException("점검일지를 찾을 수 없습니다."));
+        inspection.update(content, inspectionDate);
+    }
 }

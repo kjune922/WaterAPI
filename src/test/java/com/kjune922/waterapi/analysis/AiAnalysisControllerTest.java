@@ -8,8 +8,6 @@ import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.util.List;
-
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
@@ -53,7 +51,7 @@ class AiAnalysisControllerTest {
         mockMvc.perform(get("/analyses")
                 .param("riskLevel", "WARNING")
                 .param("page", "0")
-                .param("page","10"))
+                .param("size","10"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("analyses/list"))
                 .andExpect(model().attribute("selectedRiskLevel", RiskLevel.WARNING));

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>점검일지 수정</title>
+</head>
+<body>
+
+<h1>점검일지 수정</h1>
+
+<form th:action="@{/inspections/{id}/edit(id=${inspectionId})}"
+      th:object="${inspectionForm}"
+      method="post">
+
+    <div>
+        <label for="content">점검 내용</label>
+
+        <textarea id="content"
+                  th:field="*{content}"
+                  rows="10"
+                  cols="60">
+        </textarea>
+
+        <div th:errors="*{content}">
+            점검 내용 오류
+        </div>
+    </div>
+
+    <br>
+
+    <div>
+        <label for="inspectionDate">점검 일자</label>
+
+        <input id="inspectionDate"
+               type="date"
+               th:field="*{inspectionDate}">
+
+        <div th:errors="*{inspectionDate}">
+            점검 일자 오류
+        </div>
+    </div>
+
+    <br>
+
+    <button type="submit">수정 완료</button>
+</form>
+
+<br>
+
+<a th:href="@{/inspections/{id}(id=${inspectionId})}">
+    수정 취소
+</a>
+
+</body>
+</html>

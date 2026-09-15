@@ -21,45 +21,125 @@ public class InspectionReportController {
 
     @GetMapping
     public String inspections(Model model) {
-        model.addAttribute("inspections", inspectionReportService.findInspections());
+        model.addAttribute(
+                "inspections",
+                inspectionReportService.findInspections()
+        );
+
         return "inspections/list";
     }
 
     @GetMapping("/new")
     public String createForm(Model model) {
-        model.addAttribute("inspectionForm", new InspectionReportCreateForm());
-        model.addAttribute("facilities",facilityService.findFacilities());
+        model.addAttribute(
+                "inspectionForm",
+                new InspectionReportCreateForm()
+        );
+
+        model.addAttribute(
+                "facilities",
+                facilityService.findFacilities()
+        );
+
         return "inspections/new";
     }
 
     @PostMapping
-    public String create(@Validated @ModelAttribute("inspectionForm") InspectionReportCreateForm form
-    , BindingResult bindingResult, Model model) {
-        if(bindingResult.hasErrors()) {
-            model.addAttribute("facilities", facilityService.findFacilities());
+    public String create(
+            @Validated
+            @ModelAttribute("inspectionForm")
+            InspectionReportCreateForm form,
+            BindingResult bindingResult,
+            Model model
+    ) {
+        if (bindingResult.hasErrors()) {
+            model.addAttribute(
+                    "facilities",
+                    facilityService.findFacilities()
+            );
+
             return "inspections/new";
         }
-        inspectionReportService.registerInspection(form.getFacilityId(), form.getContent(), form.getInspectionDate());
+
+        inspectionReportService.registerInspection(
+                form.getFacilityId(),
+                form.getContent(),
+                form.getInspectionDate()
+        );
 
         return "redirect:/inspections";
     }
 
     @GetMapping("/{id}")
-    public String inspectionDetail(@PathVariable("id") Long id, Model model){
-        InspectionReport inspection = inspectionReportService.findInspection(id);
+    public String inspectionDetail(
+            @PathVariable("id") Long id,
+            Model model
+    ) {
+        InspectionReport inspection =
+                inspectionReportService.findInspection(id);
 
-        AiAnalysis analysis = aiAnalysisService.findAnalysis(id).orElse(null);
+        AiAnalysis analysis =
+                aiAnalysisService.findAnalysis(id)
+                        .orElse(null);
 
         model.addAttribute("analysis", analysis);
-
         model.addAttribute("inspection", inspection);
 
         return "inspections/detail";
     }
 
+    @GetMapping("/{id}/edit")
+    public String updateForm(
+            @PathVariable("id") Long id,
+            Model model
+    ) {
+        InspectionReport inspection =
+                inspectionReportService.findInspection(id);
+
+        InspectionReportUpdateForm form =
+                new InspectionReportUpdateForm();
+
+        form.setContent(inspection.getContent());
+        form.setInspectionDate(
+                inspection.getInspectionDate()
+        );
+
+        model.addAttribute("inspectionForm", form);
+        model.addAttribute("inspectionId", id);
+
+        return "inspections/edit";
+    }
+
+    @PostMapping("/{id}/edit")
+    public String update(
+            @PathVariable("id") Long id,
+            @Validated
+            @ModelAttribute("inspectionForm")
+            InspectionReportUpdateForm form,
+            BindingResult bindingResult,
+            Model model
+    ) {
+        if (bindingResult.hasErrors()) {
+            model.addAttribute("inspectionId", id);
+
+            return "inspections/edit";
+        }
+
+        inspectionReportService.updateInspection(
+                id,
+                form.getContent(),
+                form.getInspectionDate()
+        );
+
+        return "redirect:/inspections/" + id;
+    }
+
     @PostMapping("/{id}/analysis")
-    public String analyze(@PathVariable("id") Long id){
+    public String analyze(
+            @PathVariable("id") Long id
+    ) {
         aiAnalysisService.analyzeInspection(id);
+
         return "redirect:/inspections/" + id;
     }
 

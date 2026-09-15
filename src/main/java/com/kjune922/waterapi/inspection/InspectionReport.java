@@ -62,6 +62,15 @@ public class InspectionReport {
         }
     }
 
+    // 점검일지 수정 메소드 추가
+    public void update(String content, LocalDate inspectionDate){
+        validateContent(content);
+        validateInspectionDate(inspectionDate);
+
+        this.content = content;
+        this.inspectionDate = inspectionDate;
+    }
+
     // 점검 처리 상태 변경 메소드 추가
     public void changeProcessingStatus(ProcessingStatus processingStatus){
         if(processingStatus == null){
