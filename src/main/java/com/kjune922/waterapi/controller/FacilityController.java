@@ -2,7 +2,7 @@ package com.kjune922.waterapi.controller;
 
 import com.kjune922.waterapi.facility.FacilityType;
 import com.kjune922.waterapi.form.FacilityCreateForm;
-import com.kjune922.waterapi.service.FacilityService;
+import com.kjune922.waterapi.facility.FacilityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;

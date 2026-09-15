@@ -2,7 +2,7 @@ package com.kjune922.waterapi.inspection;
 
 import com.kjune922.waterapi.analysis.AiAnalysis;
 import com.kjune922.waterapi.analysis.AiAnalysisService;
-import com.kjune922.waterapi.service.FacilityService;
+import com.kjune922.waterapi.facility.FacilityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;

@@ -3,6 +3,8 @@ package com.kjune922.waterapi.analysis;
 import com.kjune922.waterapi.client.InspectionAiClient;
 import com.kjune922.waterapi.domain.RiskLevel;
 import com.kjune922.waterapi.dto.InspectionAnalysisResponse;
+import com.kjune922.waterapi.exception.DuplicateAnalysisException;
+import com.kjune922.waterapi.exception.ResourceNotFoundException;
 import com.kjune922.waterapi.inspection.InspectionReport;
 import com.kjune922.waterapi.inspection.InspectionReportRepository;
 import lombok.RequiredArgsConstructor;
@@ -29,11 +31,11 @@ public class AiAnalysisService {
     @Transactional
     public AiAnalysis analyzeInspection(Long inspectionReportId) {
         InspectionReport inspectionReport = inspectionReportRepository.findById(inspectionReportId)
-                .orElseThrow(() -> new IllegalArgumentException("점검일지를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("점검일지를 찾을 수 없습니다."));
 
         // 이미있으면?
         if(aiAnalysisRepository.existsByInspectionReportId(inspectionReportId)){
-            throw new IllegalArgumentException("이미 AI 분석이 완료된 점검일지입니다.");
+            throw new DuplicateAnalysisException("이미 AI 분석이 완료된 점검일지입니다.");
         }
 
         InspectionAnalysisResponse response = inspectionAiClient.analyze(inspectionReport.getContent());

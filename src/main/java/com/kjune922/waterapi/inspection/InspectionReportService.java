@@ -1,6 +1,7 @@
 package com.kjune922.waterapi.inspection;
 
 import com.kjune922.waterapi.analysis.AiAnalysisRepository;
+import com.kjune922.waterapi.exception.ResourceNotFoundException;
 import com.kjune922.waterapi.facility.Facility;
 import com.kjune922.waterapi.facility.FacilityRepository;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,7 @@ public class InspectionReportService {
     @Transactional
     public InspectionReport registerInspection(Long facilityId, String content, LocalDate inspectionDate) {
         Facility facility = facilityRepository.findById(facilityId)
-                .orElseThrow(() -> new IllegalArgumentException("시설을 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("시설을 찾을 수 없습니다."));
 
         InspectionReport report = new InspectionReport(facility,content,inspectionDate);
         return inspectionReportRepository.save(report);
@@ -36,14 +37,14 @@ public class InspectionReportService {
 
     public InspectionReport findInspection(Long id) {
         return inspectionReportRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("점검일지를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("점검일지를 찾을 수 없습니다."));
     }
 
     // 상태 변경 메소드 추가
     @Transactional
     public void changeProcessingStatus(Long inspectionId, ProcessingStatus processingStatus){
         InspectionReport inspection = inspectionReportRepository.findById(inspectionId)
-                .orElseThrow(() -> new IllegalArgumentException("점검일지를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("점검일지를 찾을 수 없습니다."));
         inspection.changeProcessingStatus(processingStatus);
     }
 
@@ -51,7 +52,7 @@ public class InspectionReportService {
     @Transactional
     public void updateInspection(Long inspectionId, String content, LocalDate inspectionDate){
         InspectionReport inspection = inspectionReportRepository.findById(inspectionId)
-                .orElseThrow(() -> new IllegalArgumentException("점검일지를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("점검일지를 찾을 수 없습니다."));
         inspection.update(content, inspectionDate);
 
         aiAnalysisRepository.deleteByInspectionReport_Id(inspectionId);
@@ -61,7 +62,7 @@ public class InspectionReportService {
     @Transactional
     public void deleteInspection(Long inspectionId) {
         InspectionReport inspection = inspectionReportRepository.findById(inspectionId)
-                .orElseThrow(() -> new IllegalArgumentException("점검일지를 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("점검일지를 찾을 수 없습니다."));
 
         aiAnalysisRepository.deleteByInspectionReport_Id(inspectionId);
 

@@ -1,8 +1,6 @@
-package com.kjune922.waterapi.service;
+package com.kjune922.waterapi.facility;
 
-import com.kjune922.waterapi.facility.Facility;
-import com.kjune922.waterapi.facility.FacilityRepository;
-import com.kjune922.waterapi.facility.FacilityType;
+import com.kjune922.waterapi.exception.ResourceNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +31,6 @@ public class FacilityService {
     // 시설 id로 조회
     public Facility findFacility(Long id){
         return facilityRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("시설을 찾을 수 없습니다."));
+                .orElseThrow(() -> new ResourceNotFoundException("시설을 찾을 수 없습니다."));
     }
 }

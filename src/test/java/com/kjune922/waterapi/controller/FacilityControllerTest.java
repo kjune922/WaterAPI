@@ -2,7 +2,7 @@ package com.kjune922.waterapi.controller;
 
 import com.kjune922.waterapi.facility.Facility;
 import com.kjune922.waterapi.facility.FacilityType;
-import com.kjune922.waterapi.service.FacilityService;
+import com.kjune922.waterapi.facility.FacilityService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;

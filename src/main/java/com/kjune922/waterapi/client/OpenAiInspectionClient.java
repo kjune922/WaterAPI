@@ -1,5 +1,6 @@
 package com.kjune922.waterapi.client;
 
+import com.kjune922.waterapi.exception.OpenAiAnalysisException;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
@@ -48,7 +49,7 @@ public class OpenAiInspectionClient
 
             if (responseBody == null ||
                     responseBody.isBlank()) {
-                throw new IllegalStateException(
+                throw new OpenAiAnalysisException(
                         "OpenAI 응답이 비어 있습니다."
                 );
             }
@@ -62,7 +63,7 @@ public class OpenAiInspectionClient
             );
         } catch (RestClientException |
                  JacksonException e) {
-            throw new IllegalStateException(
+            throw new OpenAiAnalysisException(
                     "OpenAI 분석 요청에 실패했습니다.",
                     e
             );
@@ -154,7 +155,7 @@ public class OpenAiInspectionClient
             }
         }
 
-        throw new IllegalStateException(
+        throw new OpenAiAnalysisException(
                 "OpenAI 응답에서 분석 결과를 찾을 수 없습니다."
         );
     }
