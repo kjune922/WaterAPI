@@ -1,16 +1,25 @@
 <!DOCTYPE html>
-
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <title>시설 목록</title>
 </head>
+
 <body>
+
 <h1>상하수도 시설 목록</h1>
 
-<a th:href="@{/facilities/new}">새 시설 등록</a>
+<div>
+    <a th:href="@{/facilities/new}">
+        새 시설 등록
+    </a>
 
-<a th:href="@{/}">대시보드</a>
+    <a th:href="@{/}">
+        대시보드
+    </a>
+</div>
+
+<br>
 
 <table border="1">
     <thead>
@@ -19,21 +28,44 @@
         <th>시설 이름</th>
         <th>시설 유형</th>
         <th>시설 위치</th>
+        <th>관리</th>
     </tr>
     </thead>
 
     <tbody>
-    <tr th:each="facility : ${facilities}">
-        <td th:text="${facility.id}"></td>
-        <td th:text="${facility.name}"></td>
-        <td th:text="${facility.facilityType}"></td>
-        <td th:text="${facility.location}"></td>
+    <tr th:if="${#lists.isEmpty(facilities)}">
+        <td colspan="5">
+            등록된 시설이 없습니다.
+        </td>
     </tr>
 
-    <tr th:if="${#lists.isEmpty(facilities)}">
-        <td colspan="4">등록된 시설이 없습니다.</td>
+    <tr th:each="facility : ${facilities}">
+        <td th:text="${facility.id}"></td>
+
+        <td th:text="${facility.name}"></td>
+
+        <td th:text="${facility.facilityType}"></td>
+
+        <td th:text="${facility.location}"></td>
+
+        <td>
+            <a th:href="@{/facilities/{id}/edit(id=${facility.id})}">
+                수정
+            </a>
+
+            <form th:action="@{/facilities/{id}/delete(id=${facility.id})}"
+                  method="post"
+                  style="display: inline;"
+                  onsubmit="return confirm('시설을 삭제하시겠습니까?');">
+
+                <button type="submit">
+                    삭제
+                </button>
+            </form>
+        </td>
     </tr>
     </tbody>
 </table>
+
 </body>
 </html>

@@ -1,5 +1,6 @@
 package com.kjune922.waterapi.exception;
 
+import com.kjune922.waterapi.facility.Facility;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -21,6 +22,8 @@ public class GlobalExceptionHandler {
         log.warn("요청한 리소스를 찾을 수 없음: path={}, message={}",
                 request.getRequestURI(),
                 exception.getMessage());
+
+        addErrorAttributes(model,request,HttpStatus.NOT_FOUND, exception.getMessage());
 
         return "error/error";
     }
@@ -105,5 +108,15 @@ public class GlobalExceptionHandler {
         model.addAttribute("error", status.getReasonPhrase());
         model.addAttribute("message", message);
         model.addAttribute("path", request.getRequestURI());
+    }
+
+    @ResponseStatus(HttpStatus.CONFLICT)
+    @ExceptionHandler(FacilityInUseException.class)
+    public String handleFacilityInUse(FacilityInUseException exception, HttpServletRequest request, Model model) {
+        log.warn("사용 중인 시설 삭제 요청: path={}, message={}", request.getRequestURI(), exception.getMessage());
+
+        addErrorAttributes(model, request, HttpStatus.CONFLICT, exception.getMessage());
+
+        return "error/error";
     }
 }

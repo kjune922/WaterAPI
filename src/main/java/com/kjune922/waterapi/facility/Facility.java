@@ -35,6 +35,16 @@ public class Facility {
         this.location = location;
     }
 
+    public void update(String name, FacilityType facilityType, String location){
+        validateName(name);
+        validateFacilityType(facilityType);
+        validateLocation(location);
+
+        this.name = name;
+        this.facilityType = facilityType;
+        this.location = location;
+    }
+
     private void validateName(String name){
         if(name == null || name.isBlank()){
             throw new IllegalArgumentException("시설 이름은 비어 있을 수 없습니다.");

@@ -1,17 +1,16 @@
 package com.kjune922.waterapi.controller;
 
+import com.kjune922.waterapi.facility.Facility;
 import com.kjune922.waterapi.facility.FacilityType;
 import com.kjune922.waterapi.form.FacilityCreateForm;
 import com.kjune922.waterapi.facility.FacilityService;
+import com.kjune922.waterapi.form.FacilityUpdateForm;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.ModelAttribute;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
 
 @Controller
 @RequiredArgsConstructor
@@ -55,6 +54,47 @@ public class FacilityController {
                 form.getFacilityType(),
                 form.getLocation()
         );
+        return "redirect:/facilities";
+    }
+
+    @GetMapping("/{id}/edit")
+    public String updateForm(@PathVariable("id") Long id, Model model) {
+        Facility facility = facilityService.findFacility(id);
+
+        FacilityUpdateForm form = new FacilityUpdateForm();
+
+        form.setName(facility.getName());
+        form.setFacilityType(facility.getFacilityType());
+        form.setLocation(facility.getLocation());
+
+        model.addAttribute("facilityForm", form);
+        model.addAttribute("facilityTypes", FacilityType.values());
+        model.addAttribute("facilityId", id);
+
+        return "facilities/edit";
+    }
+
+    @PostMapping("/{id}/edit")
+    public String update(
+            @PathVariable("id") Long id,
+            @Validated @ModelAttribute("facilityForm") FacilityUpdateForm form,
+            BindingResult bindingResult, Model model) {
+
+        if(bindingResult.hasErrors()){
+            model.addAttribute("facilityTypes", FacilityType.values());
+            model.addAttribute("facilityId",id);
+
+            return "facilities/edit";
+        }
+
+        facilityService.updateFacility(id,form.getName(), form.getFacilityType(), form.getLocation());
+        return "redirect:/facilities";
+    }
+
+    @PostMapping("/{id}/delete")
+    public String delete(@PathVariable("id") Long id){
+        facilityService.deleteFacility(id);
+
         return "redirect:/facilities";
     }
 }
