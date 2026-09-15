@@ -37,16 +37,14 @@
     </thead>
 
     <tbody>
-    <tr th:each="analysis : ${analyses}">
+    <tr th:each="analysis : ${analyses.content}">
         <td th:text="${analysis.id}"></td>
 
         <td th:text="${analysis.inspectionReport.facility.name}">
         </td>
 
         <td>
-            <a th:href="@{/inspections/{id}(
-                    id=${analysis.inspectionReport.id}
-               )}"
+            <a th:href="@{/inspections/{id}(id=${analysis.inspectionReport.id})}"
                th:text="${analysis.inspectionReport.content}">
             </a>
         </td>
@@ -62,13 +60,50 @@
         <td th:text="${analysis.analyzedAt}"></td>
     </tr>
 
-    <tr th:if="${#lists.isEmpty(analyses)}">
+    <tr th:if="${analyses.empty}">
         <td colspan="8">
             조회된 AI 분석 결과가 없습니다.
         </td>
     </tr>
     </tbody>
 </table>
+
+<div th:if="${analyses.totalPages > 0}">
+    <a th:if="${analyses.hasPrevious()}"
+       th:href="@{/analyses(
+            page=${analyses.number - 1},
+            size=${analyses.size},
+            riskLevel=${selectedRiskLevel}
+       )}">
+        이전
+    </a>
+
+    <span th:each="pageNumber :
+            ${#numbers.sequence(0, analyses.totalPages - 1)}">
+
+        <strong th:if="${pageNumber == analyses.number}"
+                th:text="${pageNumber + 1}">
+        </strong>
+
+        <a th:if="${pageNumber != analyses.number}"
+           th:href="@{/analyses(
+                page=${pageNumber},
+                size=${analyses.size},
+                riskLevel=${selectedRiskLevel}
+           )}"
+           th:text="${pageNumber + 1}">
+        </a>
+    </span>
+
+    <a th:if="${analyses.hasNext()}"
+       th:href="@{/analyses(
+            page=${analyses.number + 1},
+            size=${analyses.size},
+            riskLevel=${selectedRiskLevel}
+       )}">
+        다음
+    </a>
+</div>
 
 <br>
 
