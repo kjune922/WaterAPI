@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>WaterAPI 대시보드</title>
+
+    <style>
+        body {
+            max-width: 1100px;
+            margin: 40px auto;
+            padding: 0 20px;
+            font-family: Arial, sans-serif;
+            background-color: #f5f7fa;
+            color: #222;
+        }
+
+        h1 {
+            margin-bottom: 8px;
+        }
+
+        .description {
+            color: #666;
+            margin-bottom: 30px;
+        }
+
+        .menu {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .menu a {
+            padding: 10px 16px;
+            color: white;
+            background-color: #2563eb;
+            text-decoration: none;
+            border-radius: 6px;
+        }
+
+        .section {
+            margin-bottom: 36px;
+        }
+
+        .cards {
+            display: grid;
+            grid-template-columns:
+                    repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px;
+        }
+
+        .card {
+            padding: 22px;
+            background-color: white;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+        }
+
+        .card-title {
+            margin-bottom: 12px;
+            color: #666;
+            font-size: 15px;
+        }
+
+        .card-count {
+            font-size: 30px;
+            font-weight: bold;
+        }
+
+        .pending {
+            border-left: 6px solid #64748b;
+        }
+
+        .progress {
+            border-left: 6px solid #2563eb;
+        }
+
+        .completed {
+            border-left: 6px solid #16a34a;
+        }
+
+        .normal {
+            border-left: 6px solid #16a34a;
+        }
+
+        .caution {
+            border-left: 6px solid #f59e0b;
+        }
+
+        .warning {
+            border-left: 6px solid #dc2626;
+        }
+    </style>
+</head>
+
+<body>
+
+<h1>WaterAPI 대시보드</h1>
+
+<p class="description">
+    상하수도 시설 점검 및 AI 분석 현황
+</p>
+
+<nav class="menu">
+    <a th:href="@{/facilities}">시설 관리</a>
+    <a th:href="@{/inspections}">점검일지 관리</a>
+    <a th:href="@{/analyses}">AI 분석 결과</a>
+</nav>
+
+<section class="section">
+    <h2>전체 현황</h2>
+
+    <div class="cards">
+        <div class="card">
+            <div class="card-title">등록 시설</div>
+            <div class="card-count"
+                 th:text="${summary.facilityCount}">
+                0
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">전체 점검일지</div>
+            <div class="card-count"
+                 th:text="${summary.inspectionCount}">
+                0
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">AI 분석 완료</div>
+            <div class="card-count"
+                 th:text="${summary.analysisCount}">
+                0
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <h2>점검 처리 상태</h2>
+
+    <div class="cards">
+        <div class="card pending">
+            <div class="card-title">대기</div>
+            <div class="card-count"
+                 th:text="${summary.pendingCount}">
+                0
+            </div>
+        </div>
+
+        <div class="card progress">
+            <div class="card-title">처리 중</div>
+            <div class="card-count"
+                 th:text="${summary.inProgressCount}">
+                0
+            </div>
+        </div>
+
+        <div class="card completed">
+            <div class="card-title">처리 완료</div>
+            <div class="card-count"
+                 th:text="${summary.completedCount}">
+                0
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="section">
+    <h2>AI 위험도 현황</h2>
+
+    <div class="cards">
+        <div class="card normal">
+            <div class="card-title">정상</div>
+            <div class="card-count"
+                 th:text="${summary.normalCount}">
+                0
+            </div>
+        </div>
+
+        <div class="card caution">
+            <div class="card-title">주의</div>
+            <div class="card-count"
+                 th:text="${summary.cautionCount}">
+                0
+            </div>
+        </div>
+
+        <div class="card warning">
+            <div class="card-title">위험</div>
+            <div class="card-count"
+                 th:text="${summary.warningCount}">
+                0
+            </div>
+        </div>
+    </div>
+</section>
+
+</body>
+</html>

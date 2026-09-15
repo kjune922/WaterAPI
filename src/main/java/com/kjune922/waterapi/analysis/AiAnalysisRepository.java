@@ -24,4 +24,7 @@ public interface AiAnalysisRepository extends JpaRepository<AiAnalysis, Long> {
 
     // 점검일지 삭제 메소드 추가
     void deleteByInspectionReport_Id(Long inspectionId);
+
+    // 위험도에따른 총집계하는 메소드 추가
+    long countByRiskLevel(RiskLevel riskLevel);
 }
