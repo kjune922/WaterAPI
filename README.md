@@ -1,360 +1,522 @@
 # WaterAPI
 
-## 개발 기록: 시설 등록 및 조회 기능
+상하수도 시설과 점검일지를 관리하고, 점검 내용을 OpenAI로 분석해 이상 유형, 위험도, 권장 조치를 제공하는 웹 애플리케이션입니다.
 
-### 1. 시설 도메인 구현
+단순한 AI 호출에 그치지 않고 시설과 점검일지의 생명주기, 분석 결과의 정합성, 처리 상태 관리, 예외 처리와 데이터 영속성까지 하나의 업무 흐름으로 구현했습니다.
 
-상하수도 시설을 관리하기 위해 `Facility` 엔티티와 `FacilityType` Enum을 구현했다.
+> 개인 프로젝트 · Java/Spring Boot 기반  
+> AI 분석 결과는 시설 관리자의 판단을 보조하기 위한 참고 정보입니다.
 
-시설이 가지는 정보는 다음과 같다.
-
-- 시설 ID
-- 시설 이름
-- 시설 유형
-- 시설 위치
-
-시설 유형은 문자열이 아닌 Enum으로 제한했다.
-
-```java
-public enum FacilityType {
-    PUMP,
-    VALVE,
-    PIPE,
-    WATER_QUALITY_SENSOR
-}
-```
-
-`@Enumerated(EnumType.STRING)`을 적용해 Enum의 순서가 아닌 이름이 DB에 저장되도록 했다.
-
-엔티티에는 `@Data` 대신 `@Getter`를 사용해 불필요한 Setter 생성을 막았다. JPA가 사용할 기본 생성자는 `PROTECTED`로 제한했다.
+![WaterAPI 대시보드](docs/images/dashboard.png)
 
 ---
 
-### 2. Repository 구현
+## 주요 기능
 
-```java
-public interface FacilityRepository
-        extends JpaRepository<Facility, Long> {
-}
-```
+### 시설 관리
 
-`JpaRepository`의 첫 번째 타입은 관리할 엔티티이고, 두 번째 타입은 엔티티의 `@Id` 타입이다.
+- 상하수도 시설 등록·조회·수정·삭제
+- 시설 유형을 `Enum`으로 제한
+- Bean Validation을 이용한 입력값 검증
+- 점검일지가 연결된 시설의 삭제 차단
+- 사용 중인 시설 삭제 요청에 `409 Conflict` 반환
 
-- `Facility`: 저장하고 조회할 엔티티
-- `Long`: `Facility.id`의 타입
+### 점검일지 관리
 
-이를 통해 `save()`, `findAll()`, `findById()` 등의 기본 기능을 사용할 수 있다.
+- 시설별 점검일지 등록·조회·수정·삭제
+- 처리 상태 관리
+    - `PENDING`: 대기
+    - `IN_PROGRESS`: 처리 중
+    - `COMPLETED`: 처리 완료
+- 처리 상태 필터
+- 최신 점검일 기준 정렬
+- 페이지네이션
+- 점검일지 수정 시 기존 AI 분석 결과 삭제 후 재분석 지원
+
+### AI 점검 분석
+
+- OpenAI Responses API 연동
+- 점검 내용으로부터 다음 결과 생성
+    - 핵심 요약
+    - 이상 유형
+    - 위험도
+    - 권장 조치
+- JSON Schema 기반 구조화된 응답
+- 위험도를 `NORMAL`, `CAUTION`, `WARNING`으로 제한
+- 점검일지와 분석 결과를 `1:1` 관계로 관리
+- 이미 분석된 점검일지의 중복 분석 차단
+- 위험도 필터 및 페이지네이션
+
+![점검일지 및 AI 분석 결과](docs/images/inspections.png)
+
+### 통합 대시보드
+
+- 전체 시설 수
+- 전체 점검일지 수
+- AI 분석 완료 수
+- 처리 상태별 점검일지 수
+- 위험도별 AI 분석 결과 수
+
+### 공통 예외 처리
+
+- `404 Not Found`: 존재하지 않는 시설 또는 점검일지
+- `409 Conflict`: 중복 AI 분석 또는 사용 중인 시설 삭제
+- `502 Bad Gateway`: OpenAI 호출 또는 응답 처리 실패
+- `400 Bad Request`: 잘못된 요청
+- `@ControllerAdvice`를 이용한 공통 오류 화면 제공
+
+![404 오류 화면](docs/images/error_code_404.png)
 
 ---
 
-### 3. Service 구현과 트랜잭션
+## 기술 스택
 
-`FacilityService`가 시설 생성, 저장 및 조회 흐름을 담당하도록 했다.
+| 구분 | 기술 |
+|---|---|
+| Language | Java 17 |
+| Framework | Spring Boot 4.1.1, Spring MVC |
+| View | Thymeleaf, HTML, CSS |
+| Data | Spring Data JPA, Hibernate, H2 |
+| Validation | Jakarta Bean Validation |
+| AI | OpenAI Responses API, Spring RestClient |
+| Test | JUnit 5, AssertJ, MockMvc |
+| Build | Gradle |
+| 기타 | Lombok |
+
+---
+
+## 애플리케이션 구조
+
+```mermaid
+flowchart TD
+    Browser["Browser / Thymeleaf"] --> Controller["Controller"]
+    Controller --> Service["Service"]
+    Service --> Repository["Spring Data JPA"]
+    Repository --> DB["H2 File DB"]
+
+    Service --> Client["InspectionAiClient"]
+    Client --> Stub["Stub Client"]
+    Client --> OpenAI["OpenAI Client"]
+```
+
+계층별 역할을 다음과 같이 분리했습니다.
 
 ```text
 Controller
-→ FacilityService
-→ FacilityRepository
-→ H2
+- HTTP 요청과 Form 데이터 처리
+- 입력 검증 결과 확인
+- View와 Redirect 결정
+
+Service
+- 시설·점검·AI 분석 업무 규칙 처리
+- 트랜잭션 경계 설정
+- 엔티티 변경과 삭제 정책 처리
+
+Repository
+- JPA를 이용한 저장과 조회
+- 상태·위험도 필터 및 집계
+
+InspectionAiClient
+- AI 분석 호출 규격 정의
+- Stub과 OpenAI 구현체 교체
 ```
 
-클래스에는 조회 전용 트랜잭션을 적용했다.
+---
 
-```java
-@Transactional(readOnly = true)
-```
+## 도메인 관계
 
-DB를 변경하는 시설 등록 메서드에는 별도로 `@Transactional`을 적용했다.
+```mermaid
+erDiagram
+    FACILITY ||--o{ INSPECTION_REPORT : has
+    INSPECTION_REPORT ||--o| AI_ANALYSIS : analyzed
 
-```java
-@Transactional
-public Facility registerFacility(
-        String name,
-        FacilityType facilityType,
+    FACILITY {
+        Long id
+        String name
+        FacilityType facilityType
         String location
-) {
-    Facility facility = new Facility(
-            name,
-            facilityType,
-            location
-    );
+    }
 
-    return facilityRepository.save(facility);
-}
+    INSPECTION_REPORT {
+        Long id
+        String content
+        LocalDate inspectionDate
+        ProcessingStatus processingStatus
+    }
+
+    AI_ANALYSIS {
+        Long id
+        String summary
+        String abnormalityType
+        RiskLevel riskLevel
+        String recommendedAction
+        LocalDateTime analyzedAt
+    }
 ```
+
+- 하나의 시설은 여러 점검일지를 가질 수 있습니다.
+- 하나의 점검일지는 최대 하나의 AI 분석 결과만 가질 수 있습니다.
+- AI 분석 테이블의 점검일지 외래 키에 유일성 제약을 적용했습니다.
 
 ---
 
-### 4. 시설 등록 Form 검증
+## AI 분석 처리 흐름
 
-브라우저의 입력값을 받기 위해 `FacilityCreateForm`을 만들었다.
+```mermaid
+sequenceDiagram
+    participant User as 사용자
+    participant Controller as Controller
+    participant Service as AiAnalysisService
+    participant Client as InspectionAiClient
+    participant AI as OpenAI
+    participant DB as Database
 
-- 시설 이름: 빈 값 불가, 최대 50자
-- 시설 유형: 선택 필수
-- 시설 위치: 빈 값 불가, 최대 100자
-
-Controller에서는 `@Valid`로 입력을 검증하고 `BindingResult`로 실패 여부를 확인한다.
-
-```java
-if (bindingResult.hasErrors()) {
-    return "facilities/new";
-}
+    User->>Controller: AI 분석 실행
+    Controller->>Service: analyzeInspection(id)
+    Service->>DB: 점검일지 및 기존 분석 확인
+    Service->>Client: 점검 내용 분석 요청
+    Client->>AI: 구조화된 응답 요청
+    AI-->>Client: JSON 분석 결과
+    Client-->>Service: InspectionAnalysisResponse
+    Service->>DB: AiAnalysis 저장
+    Service-->>Controller: 분석 완료
+    Controller-->>User: 상세 화면 Redirect
 ```
 
-Form DTO에는 브라우저의 요청값을 바인딩해야 하므로 Getter와 Setter를 사용했다.
+OpenAI가 반환한 JSON을 애플리케이션 내부 DTO인 `InspectionAnalysisResponse`로 변환한 후 엔티티로 저장합니다.
 
----
-
-### 5. 시설 등록 및 목록 조회
-
-구현한 URL은 다음과 같다.
-
-| HTTP Method | URL | 기능 |
-|---|---|---|
-| GET | `/facilities` | 시설 목록 조회 |
-| GET | `/facilities/new` | 시설 등록 화면 |
-| POST | `/facilities` | 시설 등록 |
-
-시설이 정상적으로 등록되면 목록 주소로 Redirect한다.
-
-```java
-return "redirect:/facilities";
-```
-
-Redirect를 사용하면 등록 이후 새로고침했을 때 같은 POST 요청이 다시 전송되는 것을 방지할 수 있다.
-
----
-
-### 6. URL과 View 이름의 차이
-
-다음 두 값은 서로 다른 역할을 한다.
-
-```java
-@GetMapping
-public String facilities(Model model) {
-    model.addAttribute(
-            "facilities",
-            facilityService.findFacilities()
-    );
-
-    return "facilities/list";
-}
-```
-
-- `GET /facilities`: 브라우저가 요청하는 URL
-- `"facilities/list"`: Controller가 반환하는 View 이름
-
-Thymeleaf는 View 이름을 다음 HTML 파일의 경로로 변환한다.
-
-```text
-facilities/list
-→ src/main/resources/templates/facilities/list.html
-```
-
-따라서 브라우저에서 `/facilities/list`를 직접 요청하면 해당 URL을 처리하는 Controller가 없기 때문에 404가 발생한다.
-
----
-
-### 7. Thymeleaf 렌더링
-
-Controller는 DB에서 조회한 시설 목록을 Model에 저장한다.
-
-```java
-model.addAttribute("facilities", facilities);
-```
-
-Thymeleaf는 Model의 데이터와 HTML 템플릿을 결합한다.
-
-```html
-<tr th:each="facility : ${facilities}">
-    <td th:text="${facility.id}"></td>
-    <td th:text="${facility.name}"></td>
-    <td th:text="${facility.facilityType}"></td>
-    <td th:text="${facility.location}"></td>
-</tr>
-```
-
-시설이 두 개라면 `th:each`가 두 번 반복되어 두 개의 `<tr>`이 생성된다.
-
-최종적으로 브라우저에 전달되는 HTML은 다음과 같은 형태가 된다.
-
-```html
-<tr>
-    <td>1</td>
-    <td>2번 펌프</td>
-    <td>PUMP</td>
-    <td>청주 정수장</td>
-</tr>
-
-<tr>
-    <td>2</td>
-    <td>3번 배관</td>
-    <td>PIPE</td>
-    <td>청주 배수지</td>
-</tr>
-```
-
-`list.html` 파일에 데이터가 직접 추가되는 것은 아니다. 요청이 들어올 때마다 Thymeleaf가 최신 데이터로 최종 HTML을 만들어 브라우저에 전달한다.
-
----
-
-### 8. 전체 요청 흐름
-
-```text
-시설 등록 화면
-→ POST /facilities
-→ FacilityCreateForm에 요청값 바인딩
-→ @Valid 입력 검증
-→ FacilityService
-→ FacilityRepository
-→ H2 저장
-→ redirect:/facilities
-→ GET /facilities
-→ 최신 시설 목록 조회
-→ Thymeleaf 렌더링
-```
-
----
-
-### 9. 테스트
-
-다음 내용을 테스트했다.
-
-- Facility 엔티티 저장
-- FacilityService를 통한 시설 등록
-- 존재하지 않는 시설 조회 예외
-- 시설 목록 화면 반환
-- 시설 등록 화면 반환
-- 정상 등록 시 Service 호출 및 Redirect
-- 잘못된 입력이면 Service를 호출하지 않는지 검증
-
-Controller 테스트에서는 `MockMvc`를 사용해 실제 서버를 실행하지 않고 HTTP 요청 처리를 확인했다.
-
-```text
-가짜 HTTP 요청
-→ Controller 실행
-→ HTTP 상태 코드 검증
-→ Model 검증
-→ View 이름 검증
-→ Redirect 및 Service 호출 검증
-```
-
-다음 테스트는 `/facilities` 요청이 정상 처리되고 목록 화면을 반환하는지 검증한다.
-
-```java
-mockMvc.perform(get("/facilities"))
-        .andExpect(status().isOk())
-        .andExpect(view().name("facilities/list"))
-        .andExpect(model().attributeExists("facilities"));
-```
-
-- `get("/facilities")`: Controller에 GET 요청
-- `status().isOk()`: HTTP 200 응답 검증
-- `view().name("facilities/list")`: 목록 View 반환 검증
-- `attributeExists("facilities")`: Model에 시설 목록이 있는지 검증
-
----
-
-
-## AI 분석 기본 구조 설계
-
-점검 내용을 생성형 AI에 전달하고, 분석 결과를 애플리케이션에서 일정한 형식으로 사용하기 위한 기본 구조를 구현했다.
-
-### 1. RiskLevel
-
-AI가 판단한 점검 결과의 위험도를 Enum으로 제한했다.
-
-```java
-public enum RiskLevel {
-    NORMAL,
-    CAUTION,
-    WARNING
-}
-```
-
-- `NORMAL`: 특이사항이 없는 정상 상태
-- `CAUTION`: 추가 확인이 필요한 주의 상태
-- `WARNING`: 빠른 점검이나 조치가 필요한 위험 상태
-
-문자열을 직접 사용하는 대신 Enum으로 관리해 잘못된 위험도 값이 사용되는 것을 방지한다.
-
----
-
-### 2. InspectionAnalysisResponse
-
-AI가 반환한 분석 결과를 애플리케이션 내부에서 사용할 DTO로 구현했다.
-
-```java
-public class InspectionAnalysisResponse {
-
-    private String summary;
-    private String abnormalityType;
-    private RiskLevel riskLevel;
-    private String recommendedAction;
-}
-```
-
-각 필드의 역할은 다음과 같다.
-
-| 필드 | 역할 |
-|---|---|
-| `summary` | 점검 내용의 핵심 요약 |
-| `abnormalityType` | 발견된 이상 유형 |
-| `riskLevel` | 정상·주의·위험 단계 |
-| `recommendedAction` | 담당자에게 제안할 점검 및 조치 내용 |
-
-외부 AI의 응답을 그대로 사용하지 않고 내부 DTO로 변환하면 Controller와 Service가 AI 응답 형식에 직접 의존하지 않게 된다.
-
-`@NoArgsConstructor`는 이후 JSON 응답을 객체로 변환할 때 사용할 수 있고, `@AllArgsConstructor`는 테스트나 객체 생성 시 모든 값을 한 번에 전달할 수 있게 한다.
-
----
-
-### 3. InspectionAiClient
-
-외부 AI 호출 역할을 담당하는 인터페이스를 구현했다.
+Service는 구체적인 OpenAI 구현체가 아니라 `InspectionAiClient` 인터페이스에 의존합니다.
 
 ```java
 public interface InspectionAiClient {
 
-    InspectionAnalysisResponse analyze(String inspectionContent);
+    InspectionAnalysisResponse analyze(
+            String inspectionContent
+    );
 }
 ```
 
-입력으로 점검 내용을 받고, 분석 결과인 `InspectionAnalysisResponse`를 반환한다.
+이를 통해 실제 API를 호출하지 않는 Stub 구현체와 실제 OpenAI 구현체를 실행 환경에 따라 교체할 수 있습니다.
 
-Service가 OpenAI API를 직접 호출하지 않고 `InspectionAiClient` 인터페이스에 의존하도록 설계했다.
+---
 
-```text
-InspectionService
-→ InspectionAiClient
-→ 외부 AI API
+## 실행 프로필
+
+### Stub 프로필
+
+기본 실행에서는 OpenAI API를 호출하지 않는 Stub 구현체를 사용합니다.
+
+```bash
+./gradlew.bat bootRun
 ```
 
-이렇게 분리하면 다음과 같은 장점이 있다.
+```text
+StubInspectionAiClient
+→ 고정된 분석 결과 반환
+→ API 키와 호출 비용 없이 기능 확인
+```
 
-- 외부 AI 호출 코드와 업무 처리 코드를 분리할 수 있다.
-- AI API가 변경되어도 Service의 변경을 줄일 수 있다.
-- 테스트에서 실제 AI API 대신 Mock 객체를 사용할 수 있다.
-- API 호출 없이 분석 및 저장 흐름을 테스트할 수 있다.
+### OpenAI 프로필
 
-현재는 호출 규칙을 나타내는 인터페이스만 만들었으며, 실제 OpenAI API 구현체는 이후 단계에서 추가한다.
+Git Bash에서 API 키를 환경변수로 입력합니다.
 
-# RESTCLIENT
+```bash
+read -s OPENAI_API_KEY
+export OPENAI_API_KEY
+```
 
-- RestClient는 Spring에서 외부 HTTP API를 호출할 때 사용하는 객체.
-- CloudGuard에서 AWS SDK Client를 @Bean으로 등록한거랑 비슷
+OpenAI 프로필로 실행합니다.
 
-<실행 테스트 명령어>
-SPRING_PROFILES_ACTIVE=openai ./gradlew.bat bootRun
+```bash
+./gradlew.bat bootRun \
+  --args="--spring.profiles.active=openai"
+```
 
-![img.png](docs/images/inspections.png)
+API 키는 코드나 설정 파일에 직접 저장하지 않습니다.
 
-![img_1.png](docs/images/inspections_2.png)
+```properties
+openai.api-key=${OPENAI_API_KEY:}
+```
 
-![img_2.png](docs/images/dashboard.png)
+---
 
-![img_3.png](docs/images/analyses.png)
+## 핵심 설계 결정
 
-![img_4.png](docs/images/error_code_404.png)
+### 1. AI Client 인터페이스 분리
 
-![img_5.png](docs/images/H2DB.png)
+`AiAnalysisService`가 `OpenAiInspectionClient`에 직접 의존하면 외부 API 변경이나 테스트 과정에서 Service도 영향을 받습니다.
+
+이를 줄이기 위해 호출 규격을 `InspectionAiClient` 인터페이스로 분리했습니다.
+
+```text
+AiAnalysisService
+→ InspectionAiClient
+   ├─ StubInspectionAiClient
+   └─ OpenAiInspectionClient
+```
+
+결과적으로 다음이 가능해졌습니다.
+
+- 실제 OpenAI API와 Stub 구현체 교체
+- API 키 없이 로컬 기능 확인
+- Service와 외부 API 호출 코드의 책임 분리
+- 테스트에서 AI 호출 대체
+
+### 2. 구조화된 AI 응답
+
+자연어 응답을 문자열 파싱으로 처리하면 출력 형식이 달라질 때 오류가 발생할 수 있습니다.
+
+OpenAI 요청에 JSON Schema를 지정해 다음 필드를 필수로 반환하도록 제한했습니다.
+
+```json
+{
+  "summary": "점검 내용 요약",
+  "abnormalityType": "이상 유형",
+  "riskLevel": "NORMAL | CAUTION | WARNING",
+  "recommendedAction": "권장 조치"
+}
+```
+
+외부 응답을 내부 DTO로 변환해 Controller와 Service가 OpenAI 응답 구조에 직접 의존하지 않도록 했습니다.
+
+### 3. 점검일지와 분석 결과의 정합성
+
+점검 내용을 수정해도 기존 분석 결과가 남아 있으면 수정 전 내용을 기준으로 한 잘못된 결과가 노출됩니다.
+
+따라서 점검일지 수정 트랜잭션에서 기존 분석 결과를 함께 삭제합니다.
+
+```text
+점검일지 수정
+→ 기존 AI 분석 삭제
+→ 미분석 상태로 전환
+→ 수정된 내용으로 재분석
+```
+
+### 4. 연관 데이터가 있는 시설의 삭제 차단
+
+점검일지가 연결된 시설을 삭제하면 참조 무결성 문제가 발생할 수 있습니다.
+
+삭제 전에 연결된 점검일지 존재 여부를 확인하고, 사용 중인 시설이면 `FacilityInUseException`을 발생시켜 삭제를 차단했습니다.
+
+```text
+시설 삭제 요청
+→ 연결된 점검일지 확인
+→ 존재하면 409 Conflict
+→ 존재하지 않으면 삭제
+```
+
+### 5. 실행 DB와 테스트 DB 분리
+
+로컬 실행에서는 H2 파일 DB를 사용해 서버를 재시작해도 데이터를 유지합니다.
+
+```properties
+spring.datasource.url=jdbc:h2:file:./data/waterdb
+spring.jpa.hibernate.ddl-auto=update
+```
+
+테스트에서는 별도의 H2 인메모리 DB를 사용합니다.
+
+```properties
+spring.datasource.url=jdbc:h2:mem:waterdb-test
+spring.jpa.hibernate.ddl-auto=create-drop
+```
+
+따라서 테스트 데이터가 로컬 실행 데이터에 영향을 주지 않습니다.
+
+![H2 데이터 유지 확인](docs/images/H2DB.png)
+
+---
+
+## 문제 해결 경험
+
+### `InspectionAiClient` Bean을 찾지 못한 문제
+
+`AiAnalysisService`는 `InspectionAiClient`를 주입받지만 활성화된 구현체가 없어 애플리케이션 시작이 실패했습니다.
+
+```text
+NoSuchBeanDefinitionException:
+InspectionAiClient Bean을 찾을 수 없음
+```
+
+Stub과 OpenAI 구현체에 실행 프로필을 적용해 활성 프로필에 맞는 Bean이 등록되도록 해결했습니다.
+
+```java
+@Profile("stub")
+public class StubInspectionAiClient
+        implements InspectionAiClient {
+}
+```
+
+```java
+@Profile("openai")
+public class OpenAiInspectionClient
+        implements InspectionAiClient {
+}
+```
+
+### 목록과 페이지 객체의 타입 불일치
+
+AI 분석 목록 화면은 `Page`의 `content`, `totalPages`를 사용했지만 Controller가 `List`를 전달해 Thymeleaf 평가 오류가 발생했습니다.
+
+```text
+Controller 전달: List<AiAnalysis>
+View 기대:      Page<AiAnalysis>
+```
+
+Controller와 Service의 반환 타입을 `Page<AiAnalysis>`로 통일하고 `Pageable`을 전달하도록 수정했습니다.
+
+### H2 메모리 DB의 데이터 소실
+
+초기에는 `jdbc:h2:mem`을 사용해 서버를 재시작할 때 시설과 점검 데이터가 모두 사라졌습니다.
+
+로컬 실행 DB를 H2 파일 방식으로 변경하고 `ddl-auto=update`를 적용해 재시작 후에도 데이터를 유지하도록 개선했습니다.
+
+### 예외 메시지가 사용자 화면에 표시되지 않은 문제
+
+404 화면은 렌더링됐지만 상태 코드와 메시지가 표시되지 않았습니다.
+
+전역 예외 처리 메서드에서 오류 정보를 Model에 전달하지 않은 것이 원인이었습니다.
+
+```java
+addErrorAttributes(
+        model,
+        request,
+        HttpStatus.NOT_FOUND,
+        exception.getMessage()
+);
+```
+
+상태 코드, 오류 이름, 메시지, 요청 경로, 발생 시각을 공통으로 Model에 저장하도록 수정했습니다.
+
+---
+
+## 주요 URL
+
+| Method | URL | 기능 |
+|---|---|---|
+| GET | `/` | 대시보드 |
+| GET | `/facilities` | 시설 목록 |
+| GET | `/facilities/new` | 시설 등록 화면 |
+| POST | `/facilities` | 시설 등록 |
+| GET | `/facilities/{id}/edit` | 시설 수정 화면 |
+| POST | `/facilities/{id}/edit` | 시설 수정 |
+| POST | `/facilities/{id}/delete` | 시설 삭제 |
+| GET | `/inspections` | 점검일지 목록 |
+| GET | `/inspections/new` | 점검일지 등록 화면 |
+| POST | `/inspections` | 점검일지 등록 |
+| GET | `/inspections/{id}` | 점검일지 상세 |
+| GET | `/inspections/{id}/edit` | 점검일지 수정 화면 |
+| POST | `/inspections/{id}/edit` | 점검일지 수정 |
+| POST | `/inspections/{id}/delete` | 점검일지 삭제 |
+| POST | `/inspections/{id}/status` | 처리 상태 변경 |
+| POST | `/inspections/{id}/analysis` | AI 분석 실행 |
+| GET | `/analyses` | AI 분석 결과 목록 |
+
+---
+
+## 테스트 전략
+
+모든 구현 세부사항을 테스트하기보다 핵심 업무 규칙과 요청 흐름을 중심으로 검증했습니다.
+
+### Repository
+
+- 시설 및 점검일지 저장·조회
+- JPA 연관관계 저장
+- 위험도와 처리 상태 조회
+
+### Service
+
+- 존재하지 않는 시설과 점검일지 예외
+- 점검일지 처리 상태 변경
+- 이미 분석된 점검일지의 중복 분석 차단
+- 점검일지 수정과 변경 감지
+
+### Controller
+
+- 시설 및 점검일지 등록 화면
+- 정상 등록 후 Redirect
+- 잘못된 입력의 Field Error
+- 분석 결과 목록과 위험도 필터
+- 페이지 객체의 Model 전달
+
+테스트 실행:
+
+```bash
+./gradlew.bat test
+```
+
+테스트는 `src/test/resources/application.properties`의 별도 인메모리 DB를 사용합니다.
+
+---
+
+## 로컬 실행
+
+### 요구사항
+
+- Java 17
+- Windows 또는 Gradle 실행 환경
+- 실제 AI 분석 시 OpenAI API Key
+
+### 저장소 실행
+
+```bash
+git clone https://github.com/kjune922/WaterAPI.git
+cd WaterAPI
+./gradlew.bat bootRun
+```
+
+브라우저 접속:
+
+```text
+http://localhost:8080
+```
+
+H2 Console:
+
+```text
+http://localhost:8080/h2-console
+```
+
+H2 접속 정보:
+
+```text
+JDBC URL: jdbc:h2:file:./data/waterdb
+User Name: sa
+Password:
+```
+
+---
+
+## 프로젝트 구조
+
+```text
+src/main/java/com/kjune922/waterapi
+├── analysis       # AI 분석 엔티티·서비스·목록
+├── client         # Stub/OpenAI AI Client
+├── config         # OpenAI RestClient 설정
+├── controller     # 시설 MVC Controller
+├── dashboard      # 현황 집계
+├── domain         # 위험도 Enum
+├── dto            # AI 응답 DTO
+├── exception      # 커스텀 예외와 공통 처리
+├── facility       # 시설 도메인
+├── form           # 시설 Form DTO
+└── inspection     # 점검일지 도메인
+```
+
+---
+
+## 한계 및 개선 방향
+
+- 현재 로컬 저장소는 H2 파일 DB를 사용하므로 운영 환경에서는 MySQL 등의 외부 DB로 분리할 필요가 있습니다.
+- OpenAI 분석은 동기 방식이므로 요청 시간이 길어질 수 있습니다.
+- 외부 API 장애에 대한 재시도와 타임아웃 정책을 보완할 필요가 있습니다.
+- 사용자 인증과 시설 관리자별 권한 구분이 구현되어 있지 않습니다.
+- 운영 환경에서는 API 키를 AWS Systems Manager Parameter Store 등의 보안 저장소로 관리할 수 있습니다.
+- 향후 Docker 기반 실행 환경과 CI/CD를 추가할 수 있습니다.
+
+---
+
+## 개발자
+
+- GitHub: [kjune922](https://github.com/kjune922)
