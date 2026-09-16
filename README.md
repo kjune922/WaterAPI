@@ -347,14 +347,14 @@ InspectionService
 <실행 테스트 명령어>
 SPRING_PROFILES_ACTIVE=openai ./gradlew.bat bootRun
 
-![img.png](img.png)
+![img.png](docs/images/inspections.png)
 
-![img_1.png](img_1.png)
+![img_1.png](docs/images/inspections_2.png)
 
-![img_2.png](img_2.png)
+![img_2.png](docs/images/dashboard.png)
 
-![img_3.png](img_3.png)
+![img_3.png](docs/images/analyses.png)
 
-![img_4.png](img_4.png)
+![img_4.png](docs/images/error_code_404.png)
 
-![img_5.png](img_5.png)
+![img_5.png](docs/images/H2DB.png)

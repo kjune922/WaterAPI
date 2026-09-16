@@ -1,0 +1,227 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    max-width: 1100px;
+    margin: 40px auto;
+    padding: 0 20px;
+    font-family: Arial, sans-serif;
+    color: #1f2937;
+    background-color: #f5f7fa;
+}
+
+h1 {
+    margin-bottom: 24px;
+    color: #111827;
+}
+
+h2 {
+    margin-top: 32px;
+    color: #1f2937;
+}
+
+a {
+    color: #2563eb;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+body > div:first-of-type {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+table {
+    width: 100%;
+    margin-top: 20px;
+    overflow: hidden;
+    background-color: white;
+    border: 1px solid #d1d5db;
+    border-collapse: collapse;
+    border-radius: 8px;
+}
+
+th,
+td {
+    padding: 13px 15px;
+    border: 1px solid #e5e7eb;
+    text-align: left;
+    vertical-align: middle;
+}
+
+th {
+    color: #374151;
+    background-color: #f3f4f6;
+}
+
+tbody tr:hover {
+    background-color: #f9fafb;
+}
+
+form {
+    max-width: 700px;
+    padding: 24px;
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+}
+
+form > div {
+    margin-bottom: 20px;
+}
+
+table form {
+    display: inline;
+    max-width: none;
+    padding: 0;
+    background: none;
+    border: 0;
+}
+
+label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+input,
+select,
+textarea {
+    width: 100%;
+    padding: 10px 12px;
+    font: inherit;
+    background-color: white;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    border-color: #2563eb;
+    outline: none;
+    box-shadow: 0 0 0 3px rgb(37 99 235 / 15%);
+}
+
+button {
+    padding: 9px 15px;
+    color: white;
+    font: inherit;
+    cursor: pointer;
+    background-color: #2563eb;
+    border: 0;
+    border-radius: 6px;
+}
+
+button:hover {
+    background-color: #1d4ed8;
+}
+
+p[th\:errors] {
+    margin: 6px 0 0;
+    color: #dc2626;
+    font-size: 14px;
+}
+
+/* 페이지네이션 */
+nav {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 22px;
+}
+
+nav a,
+nav strong {
+    display: inline-block;
+    padding: 8px 12px;
+    background-color: white;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+}
+
+nav strong {
+    color: white;
+    background-color: #2563eb;
+    border-color: #2563eb;
+}
+
+/* 대시보드 */
+.description {
+    margin-bottom: 30px;
+    color: #6b7280;
+}
+
+.menu {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 32px;
+}
+
+.menu a {
+    padding: 10px 16px;
+    color: white;
+    background-color: #2563eb;
+    border-radius: 6px;
+}
+
+.menu a:hover {
+    text-decoration: none;
+    background-color: #1d4ed8;
+}
+
+.section {
+    margin-bottom: 36px;
+}
+
+.cards {
+    display: grid;
+    grid-template-columns:
+        repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+}
+
+.card {
+    padding: 22px;
+    background-color: white;
+    border: 1px solid #ddd;
+    border-radius: 10px;
+}
+
+.card-title {
+    margin-bottom: 12px;
+    color: #666;
+    font-size: 15px;
+}
+
+.card-count {
+    font-size: 30px;
+    font-weight: bold;
+}
+
+.pending {
+    border-left: 6px solid #64748b;
+}
+
+.progress {
+    border-left: 6px solid #2563eb;
+}
+
+.completed,
+.normal {
+    border-left: 6px solid #16a34a;
+}
+
+.caution {
+    border-left: 6px solid #f59e0b;
+}
+
+.warning {
+    border-left: 6px solid #dc2626;
+}
