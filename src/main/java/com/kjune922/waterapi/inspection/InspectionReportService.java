@@ -49,6 +49,11 @@ public class InspectionReportService {
     }
 
     // 점검일지 업데이트 메소드 추가
+
+    /**
+     * 연관관계의 주인인 Ai분석에서 점검일지를 참조하고있으니
+     * 주인쪽인 AI분석일지를 먼저 삭제하고 -> 점검일지를 삭제하는 순서가 옳다
+     */
     @Transactional
     public void updateInspection(Long inspectionId, String content, LocalDate inspectionDate){
         InspectionReport inspection = inspectionReportRepository.findById(inspectionId)

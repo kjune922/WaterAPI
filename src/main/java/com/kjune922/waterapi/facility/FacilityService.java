@@ -31,17 +31,23 @@ public class FacilityService {
         return facilityRepository.findAll();
     }
 
-    // 시설 id로 조회
+    // 시설 id로 조회 (단건 조회)
     public Facility findFacility(Long id){
         return facilityRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("시설을 찾을 수 없습니다."));
     }
 
+    /**
+     * 등록은 새 엔티티를 생성해 저장
+     * 수정은 기존 엔티티 조회해서 값을 변경
+     * 삭제는 점검일지 여부 확인한 뒤 명시적으로 삭제
+     */
+
     // 시설 수정 메소드 추가
     @Transactional
     public void updateFacility(Long facilityId, String name, FacilityType facilityType, String location){
-        Facility facility = findFacility(facilityId);
-        facility.update(name, facilityType, location);
+        Facility facility = findFacility(facilityId); // 기존 시설을 조회해 영속성 컨텍스트에 등록
+        facility.update(name, facilityType, location); // 변경감지로 DB에 수정내용 반영
     }
 
     // 시설 삭제 메소드 추가

@@ -54,10 +54,6 @@
     점검일지 수정
 </a>
 
-<a th:href="@{/inspections/{id}/edit(id=${inspection.id})}">
-    점검일지 수정
-</a>
-
 <form th:action="@{/inspections/{id}/delete(id=${inspection.id})}"
       method="post"
       style="display: inline;"

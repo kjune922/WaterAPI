@@ -23,6 +23,11 @@ public class InspectionReportController {
     private final FacilityService facilityService;
     private final AiAnalysisService aiAnalysisService;
 
+
+    /**
+     * processingStatuses 로 전체 상태 선택지
+     * selectedProcessingStatus 는 선택된 하나의 상태
+     */
     @GetMapping
     public String inspections(
             @RequestParam(value = "processingStatus", required = false) ProcessingStatus processingStatus,

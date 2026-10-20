@@ -1,6 +1,5 @@
 package com.kjune922.waterapi.exception;
 
-import com.kjune922.waterapi.facility.Facility;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
