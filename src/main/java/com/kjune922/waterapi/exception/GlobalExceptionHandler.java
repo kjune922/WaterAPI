@@ -59,8 +59,7 @@ public class GlobalExceptionHandler {
     ) {
         log.error(
                 "OpenAI 분석 실패: path={}",
-                request.getRequestURI(),
-                exception
+                request.getRequestURI()
         );
 
         addErrorAttributes(

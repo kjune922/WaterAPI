@@ -37,8 +37,10 @@ class InspectionReportControllerTest {
 
     @Test
     void 점검일지_목록_조회 () throws Exception {
-        given(inspectionReportService.findInspections())
-                .willReturn(List.of());
+        given(inspectionReportService.findInspectionPage(
+                org.mockito.ArgumentMatchers.isNull(),
+                org.mockito.ArgumentMatchers.any(org.springframework.data.domain.Pageable.class)))
+                .willReturn(org.springframework.data.domain.Page.empty());
 
         mockMvc.perform(get("/inspections"))
                 .andExpect(status().isOk())

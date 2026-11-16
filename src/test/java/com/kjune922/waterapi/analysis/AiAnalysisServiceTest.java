@@ -125,7 +125,7 @@ class AiAnalysisServiceTest {
 
         assertThatThrownBy(() ->
                 aiAnalysisService.analyzeInspection(1L))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(com.kjune922.waterapi.exception.DuplicateAnalysisException.class)
                 .hasMessage(
                         "이미 AI 분석이 완료된 점검일지입니다."
                 );
@@ -142,7 +142,7 @@ class AiAnalysisServiceTest {
 
         assertThatThrownBy(() ->
                 aiAnalysisService.analyzeInspection(999L))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(com.kjune922.waterapi.exception.ResourceNotFoundException.class)
                 .hasMessage("점검일지를 찾을 수 없습니다.");
 
         verifyNoInteractions(inspectionAiClient);
@@ -211,5 +211,50 @@ class AiAnalysisServiceTest {
         verify(aiAnalysisRepository).findAllByRiskLevel(RiskLevel.WARNING, pageable);
 
         verify(aiAnalysisRepository, never()).findAll(any(Pageable.class));
+    }
+
+    @Test
+    void AI_호출이_실패하면_분석결과를_저장하지_않는다() {
+        InspectionReport report = prepareUnanalyzedReport();
+        given(inspectionAiClient.analyze(report.getContent()))
+                .willThrow(new com.kjune922.waterapi.exception.OpenAiAnalysisException("분석 실패"));
+
+        assertThatThrownBy(() -> aiAnalysisService.analyzeInspection(1L))
+                .isInstanceOf(com.kjune922.waterapi.exception.OpenAiAnalysisException.class);
+
+        verify(aiAnalysisRepository, never()).save(any(AiAnalysis.class));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.MethodSource("invalidResponses")
+    void AI_응답이_저장기준을_벗어나면_저장하지_않는다(InspectionAnalysisResponse response) {
+        InspectionReport report = prepareUnanalyzedReport();
+        given(inspectionAiClient.analyze(report.getContent())).willReturn(response);
+
+        assertThatThrownBy(() -> aiAnalysisService.analyzeInspection(1L))
+                .isInstanceOf(com.kjune922.waterapi.exception.OpenAiAnalysisException.class);
+
+        verify(aiAnalysisRepository, never()).save(any(AiAnalysis.class));
+    }
+
+    static java.util.stream.Stream<InspectionAnalysisResponse> invalidResponses() {
+        return java.util.stream.Stream.of(
+                null,
+                new InspectionAnalysisResponse("요약", "진동", null, "담당자 확인"),
+                new InspectionAnalysisResponse(" ", "진동", RiskLevel.CAUTION, "담당자 확인"),
+                new InspectionAnalysisResponse("가".repeat(501), "진동", RiskLevel.CAUTION, "담당자 확인"),
+                new InspectionAnalysisResponse("요약", "가".repeat(101), RiskLevel.CAUTION, "담당자 확인"),
+                new InspectionAnalysisResponse("요약", "진동", RiskLevel.CAUTION, "가".repeat(1001)),
+                new InspectionAnalysisResponse("요약", null, RiskLevel.CAUTION, "담당자 확인"),
+                new InspectionAnalysisResponse("요약", "진동", RiskLevel.CAUTION, "")
+        );
+    }
+
+    private InspectionReport prepareUnanalyzedReport() {
+        Facility facility = new Facility("테스트 펌프", FacilityType.PUMP, "테스트 시설");
+        InspectionReport report = new InspectionReport(facility, "진동 발생", LocalDate.of(2026, 11, 16));
+        given(inspectionReportRepository.findById(1L)).willReturn(Optional.of(report));
+        given(aiAnalysisRepository.existsByInspectionReportId(1L)).willReturn(false);
+        return report;
     }
 }

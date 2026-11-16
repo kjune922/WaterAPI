@@ -40,3 +40,5 @@ application-secret.properties
 ### 코드작성하며 추가한 것들
 .env
 /data/
+.env.*
+!.env.example

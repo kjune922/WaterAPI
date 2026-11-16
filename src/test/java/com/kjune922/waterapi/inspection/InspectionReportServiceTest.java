@@ -51,14 +51,14 @@ class InspectionReportServiceTest {
                 999L,
                 "점검 내용",
                 LocalDate.of(2026,9,10)
-        )).isInstanceOf(IllegalArgumentException.class)
+        )).isInstanceOf(com.kjune922.waterapi.exception.ResourceNotFoundException.class)
                 .hasMessage("시설을 찾을 수 없습니다.");
     }
 
     @Test
     void 존재하지않는_점검일지_조회불가 () {
         assertThatThrownBy(() -> inspectionReportService.findInspection(999L))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(com.kjune922.waterapi.exception.ResourceNotFoundException.class)
                 .hasMessage("점검일지를 찾을 수 없습니다.");
     }
 
@@ -98,7 +98,7 @@ class InspectionReportServiceTest {
         assertThatThrownBy(() -> inspectionReportService.changeProcessingStatus(
                 990L,
                 ProcessingStatus.COMPLETED
-        )).isInstanceOf(IllegalArgumentException.class)
+        )).isInstanceOf(com.kjune922.waterapi.exception.ResourceNotFoundException.class)
                 .hasMessage("점검일지를 찾을 수 없습니다.");
     }
 
@@ -130,7 +130,7 @@ class InspectionReportServiceTest {
     void ifNotExistNoUpdate() {
         assertThatThrownBy(() -> inspectionReportService.updateInspection(
                 99L, "점검 내용", LocalDate.of(2026,9,15)))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(com.kjune922.waterapi.exception.ResourceNotFoundException.class)
                 .hasMessage("점검일지를 찾을 수 없습니다.");
     }
 

@@ -4,6 +4,7 @@ import com.kjune922.waterapi.client.InspectionAiClient;
 import com.kjune922.waterapi.domain.RiskLevel;
 import com.kjune922.waterapi.dto.InspectionAnalysisResponse;
 import com.kjune922.waterapi.exception.DuplicateAnalysisException;
+import com.kjune922.waterapi.exception.OpenAiAnalysisException;
 import com.kjune922.waterapi.exception.ResourceNotFoundException;
 import com.kjune922.waterapi.inspection.InspectionReport;
 import com.kjune922.waterapi.inspection.InspectionReportRepository;
@@ -40,6 +41,8 @@ public class AiAnalysisService {
 
         InspectionAnalysisResponse response = inspectionAiClient.analyze(inspectionReport.getContent());
 
+        validateResponse(response);
+
         AiAnalysis aiAnalysis = new AiAnalysis(
                 inspectionReport,
                 response.getSummary(),
@@ -50,6 +53,22 @@ public class AiAnalysisService {
         );
 
         return aiAnalysisRepository.save(aiAnalysis);
+    }
+
+    // 외부 시스템의 응답도 DB 제약과 업무 기준을 만족해야 저장한다.
+    private void validateResponse(InspectionAnalysisResponse response) {
+        if (response == null || response.getRiskLevel() == null) {
+            throw new OpenAiAnalysisException("AI 분석 결과의 필수 항목이 누락되었습니다.");
+        }
+        validateText(response.getSummary(), 500);
+        validateText(response.getAbnormalityType(), 100);
+        validateText(response.getRecommendedAction(), 1000);
+    }
+
+    private void validateText(String text, int maximumLength) {
+        if (text == null || text.isBlank() || text.length() > maximumLength) {
+            throw new OpenAiAnalysisException("AI 분석 결과의 내용 또는 길이가 저장 기준에 맞지 않습니다.");
+        }
     }
 
     public Optional<AiAnalysis> findAnalysis(Long inspectionReportId) {

@@ -31,7 +31,7 @@ class FacilityServiceTest {
     @Test
     void 존재하지않는_시설은_조회불가() {
         assertThatThrownBy(() -> facilityService.findFacility(999L))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(com.kjune922.waterapi.exception.ResourceNotFoundException.class)
                 .hasMessage("시설을 찾을 수 없습니다.");
     }
 }

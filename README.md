@@ -1,10 +1,13 @@
+> 제출 준비 브랜치의 변경 내역: [코드 읽기와 검증 상태](docs/IMPLEMENTATION_REVIEW.md), [AWS 배포 준비](docs/AWS_RUNBOOK.md).
+> Docker/MySQL 실행 구성과 CI를 추가했으며, 아직 실제 실행 통과 및 AWS 배포 완료를 확인하지 않았습니다.
+
 # WaterAPI
 
 상하수도 시설과 점검일지를 관리하고, 점검 내용을 OpenAI로 분석해 이상 유형, 위험도, 권장 조치를 제공하는 웹 애플리케이션입니다.
 
 단순한 AI 호출에 그치지 않고 시설과 점검일지의 생명주기, 분석 결과의 정합성, 처리 상태 관리, 예외 처리와 데이터 영속성까지 하나의 업무 흐름으로 구현했습니다.
 
-> 개인 프로젝트 · Java/Spring Boot 기반  
+> 개인 프로젝트, Java/Spring Boot 기반
 > AI 분석 결과는 시설 관리자의 판단을 보조하기 위한 참고 정보입니다.
 
 ![WaterAPI 대시보드](docs/images/dashboard.png)
@@ -15,7 +18,7 @@
 
 ### 시설 관리
 
-- 상하수도 시설 등록·조회·수정·삭제
+- 상하수도 시설 등록, 조회, 수정, 삭제
 - 시설 유형을 `Enum`으로 제한
 - Bean Validation을 이용한 입력값 검증
 - 점검일지가 연결된 시설의 삭제 차단
@@ -23,7 +26,7 @@
 
 ### 점검일지 관리
 
-- 시설별 점검일지 등록·조회·수정·삭제
+- 시설별 점검일지 등록, 조회, 수정, 삭제
 - 처리 상태 관리
     - `PENDING`: 대기
     - `IN_PROGRESS`: 처리 중
@@ -108,13 +111,13 @@ Controller
 - View와 Redirect 결정
 
 Service
-- 시설·점검·AI 분석 업무 규칙 처리
+- 시설, 점검, AI 분석 업무 규칙 처리
 - 트랜잭션 경계 설정
 - 엔티티 변경과 삭제 정책 처리
 
 Repository
 - JPA를 이용한 저장과 조회
-- 상태·위험도 필터 및 집계
+- 상태, 위험도 필터 및 집계
 
 InspectionAiClient
 - AI 분석 호출 규격 정의
@@ -420,7 +423,7 @@ addErrorAttributes(
 
 ### Repository
 
-- 시설 및 점검일지 저장·조회
+- 시설 및 점검일지 저장, 조회
 - JPA 연관관계 저장
 - 위험도와 처리 상태 조회
 
@@ -474,7 +477,7 @@ http://localhost:8080
 H2 Console:
 
 ```text
-http://localhost:8080/h2-console
+기본 설정에서는 H2 Console을 비활성화했습니다.
 ```
 
 H2 접속 정보:
@@ -491,7 +494,7 @@ Password:
 
 ```text
 src/main/java/com/kjune922/waterapi
-├── analysis       # AI 분석 엔티티·서비스·목록
+├── analysis       # AI 분석 엔티티, 서비스, 목록
 ├── client         # Stub/OpenAI AI Client
 ├── config         # OpenAI RestClient 설정
 ├── controller     # 시설 MVC Controller
@@ -508,7 +511,7 @@ src/main/java/com/kjune922/waterapi
 
 ## 한계 및 개선 방향
 
-- 현재 로컬 저장소는 H2 파일 DB를 사용하므로 운영 환경에서는 MySQL 등의 외부 DB로 분리할 필요가 있습니다.
+- 기본 로컬 저장소는 H2 파일 DB입니다. MySQL, Flyway 구성은 prod 프로필과 compose.yaml에 추가했으며 실행 검증이 필요합니다.
 - OpenAI 분석은 동기 방식이므로 요청 시간이 길어질 수 있습니다.
 - 외부 API 장애에 대한 재시도와 타임아웃 정책을 보완할 필요가 있습니다.
 - 사용자 인증과 시설 관리자별 권한 구분이 구현되어 있지 않습니다.
@@ -520,3 +523,19 @@ src/main/java/com/kjune922/waterapi
 ## 개발자
 
 - GitHub: [kjune922](https://github.com/kjune922)
+
+## 실행 환경 선택
+
+기본 실행은 H2 파일 DB와 Stub입니다. 실제 AI 호출은 `openai` 프로필을 사용합니다. `stub`과 `openai`는 동시에 활성화하지 않습니다.
+
+- H2 + Stub: `bash gradlew bootRun`
+- H2 + OpenAI: `bash gradlew bootRun --args="--spring.profiles.active=openai"`
+- MySQL + Stub: `bash gradlew bootRun --args="--spring.profiles.active=mysql,stub"`
+- MySQL + OpenAI: `bash gradlew bootRun --args="--spring.profiles.active=mysql,openai"`
+
+Windows PowerShell에서는 `bash gradlew` 대신 `.\gradlew.bat`를 사용합니다.
+MySQL 프로필은 `WATERAPI_DB_URL`, `WATERAPI_DB_USERNAME`, `WATERAPI_DB_PASSWORD` 환경변수가 필요합니다. OpenAI 프로필은 `OPENAI_API_KEY`가 필요합니다. 비밀번호와 API 키를 커밋하지 않습니다.
+
+현재 MySQL 프로필은 로컬 통합 확인용입니다. 운영 배포 전 마이그레이션과 스키마 검증 구성을 추가합니다.
+
+Docker와 새 MySQL DB로 실행하는 방법은 [실행 안내](docs/IMPLEMENTATION_REVIEW.md#5-직접-실행)를 참고하세요.

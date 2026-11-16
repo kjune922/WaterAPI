@@ -1,0 +1,29 @@
+services:
+  db:
+    image: mysql:8.4
+    environment:
+      MYSQL_DATABASE: waterapi
+      MYSQL_USER: waterapi
+      MYSQL_PASSWORD: ${WATERAPI_DB_PASSWORD:?Set WATERAPI_DB_PASSWORD in .env}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "MYSQL_PWD=$$MYSQL_PASSWORD mysql -h 127.0.0.1 -u waterapi -D waterapi -e 'SELECT 1'"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+  app:
+    build: .
+    ports:
+      - "127.0.0.1:8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod,stub
+      WATERAPI_DB_URL: jdbc:mysql://db:3306/waterapi?allowPublicKeyRetrieval=true&useSSL=false
+      WATERAPI_DB_USERNAME: waterapi
+      WATERAPI_DB_PASSWORD: ${WATERAPI_DB_PASSWORD:?Set WATERAPI_DB_PASSWORD in .env}
+    depends_on:
+      db:
+        condition: service_healthy
+volumes:
+  mysql-data:
