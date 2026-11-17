@@ -19,6 +19,7 @@ services:
       - "127.0.0.1:8080:8080"
     environment:
       SPRING_PROFILES_ACTIVE: prod,stub
+      JAVA_TOOL_OPTIONS: "-Duser.timezone=Asia/Seoul"
       WATERAPI_DB_URL: jdbc:mysql://db:3306/waterapi?allowPublicKeyRetrieval=true&useSSL=false
       WATERAPI_DB_USERNAME: waterapi
       WATERAPI_DB_PASSWORD: ${WATERAPI_DB_PASSWORD:?Set WATERAPI_DB_PASSWORD in .env}
