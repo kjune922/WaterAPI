@@ -257,4 +257,28 @@ class AiAnalysisServiceTest {
         given(aiAnalysisRepository.existsByInspectionReportId(1L)).willReturn(false);
         return report;
     }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.NullAndEmptySource
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"   ", "ㅇㅇㅇㅇ", "ㅋㅋㅋㅋ", "12345", "!!!", "aaaa", "가가가가"})
+    void 무의미한_입력은_AI를_호출하거나_저장하지_않는다(String content) {
+        InspectionReport report = mock(InspectionReport.class);
+        given(report.getContent()).willReturn(content);
+        given(inspectionReportRepository.findById(1L)).willReturn(Optional.of(report));
+        given(aiAnalysisRepository.existsByInspectionReportId(1L)).willReturn(false);
+
+        assertThatThrownBy(() -> aiAnalysisService.analyzeInspection(1L))
+                .isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(inspectionAiClient);
+        verify(aiAnalysisRepository, never()).save(any(AiAnalysis.class));
+    }
+
+    @Test
+    void 관찰정보_부족으로_거절되면_저장하지_않는다() {
+        prepareUnanalyzedReport();
+        given(inspectionAiClient.analyze(any())).willThrow(new IllegalArgumentException("관찰 정보가 부족합니다."));
+        assertThatThrownBy(() -> aiAnalysisService.analyzeInspection(1L))
+                .isInstanceOf(IllegalArgumentException.class);
+        verify(aiAnalysisRepository, never()).save(any(AiAnalysis.class));
+    }
 }

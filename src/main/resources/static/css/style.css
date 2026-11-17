@@ -30,9 +30,10 @@ a:hover {
     text-decoration: underline;
 }
 
-body > div:first-of-type {
+.page-links {
     display: flex;
     gap: 14px;
+    flex-wrap: wrap;
     align-items: center;
     margin-bottom: 24px;
 }
@@ -224,4 +225,30 @@ nav strong {
 
 .warning {
     border-left: 6px solid #dc2626;
+}
+
+/* 상세 화면의 제목 열은 본문 길이에 따라 줄어들지 않게 유지한다. */
+.detail-table {
+    table-layout: fixed;
+}
+
+.detail-table th {
+    width: 130px;
+    white-space: nowrap;
+    vertical-align: top;
+}
+
+.detail-table td {
+    line-height: 1.7;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 600px) {
+    .detail-table th {
+        width: 100px;
+    }
+    .detail-table th,
+    .detail-table td {
+        padding: 12px 10px;
+    }
 }

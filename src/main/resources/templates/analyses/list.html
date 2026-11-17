@@ -11,7 +11,7 @@
 
 <a th:href="@{/}">대시보드</a>
 
-<div>
+<div class="page-links">
     <a th:href="@{/analyses}">
         전체
     </a>
@@ -60,7 +60,7 @@
 
         <td th:text="${analysis.recommendedAction}"></td>
 
-        <td th:text="${analysis.analyzedAt}"></td>
+        <td th:text="${#temporals.format(analysis.analyzedAt, 'yyyy-MM-dd HH:mm:ss')}"></td>
     </tr>
 
     <tr th:if="${analyses.empty}">

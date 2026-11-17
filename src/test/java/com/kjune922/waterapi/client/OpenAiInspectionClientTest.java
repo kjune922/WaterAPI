@@ -27,9 +27,10 @@ class OpenAiInspectionClientTest {
 
     @Test
     void 구조화된_결과를_읽는다() {
-        String response = """
-                {"output":[{"content":[{"type":"output_text","text":"{\\"summary\\":\\"진동 발생\\",\\"abnormalityType\\":\\"VIBRATION\\",\\"riskLevel\\":\\"CAUTION\\",\\"recommendedAction\\":\\"담당자 확인\\"}"}]}]}
-                """;
+        String response = responseWithText("""
+                {"analyzable":true,"analysis":{"summary":"진동 발생","abnormalityType":"VIBRATION",
+                "riskLevel":"CAUTION","recommendedAction":"담당자 확인"}}
+                """);
         server.expect(requestTo("https://api.openai.com/v1/responses"))
                 .andRespond(withSuccess(response, MediaType.APPLICATION_JSON));
         assertThat(client.analyze("진동 발생").getRiskLevel()).isEqualTo(RiskLevel.CAUTION);
@@ -63,5 +64,33 @@ class OpenAiInspectionClientTest {
         assertThatThrownBy(() -> client.analyze("입력"))
                 .isInstanceOf(OpenAiAnalysisException.class);
         server.verify();
+    }
+
+    @Test
+    void 정보가_부족하면_분석결과로_반환하지_않는다() {
+        server.expect(requestTo("https://api.openai.com/v1/responses"))
+                .andRespond(withSuccess(responseWithText("{\"analyzable\":false,\"analysis\":null}"), MediaType.APPLICATION_JSON));
+        assertThatThrownBy(() -> client.analyze("점검했습니다"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("관찰 정보가 부족");
+        server.verify();
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {
+            "{}", "{\"analyzable\":\"true\",\"analysis\":{}}", "{\"analyzable\":true,\"analysis\":null}"
+    })
+    void 불완전한_분석가능_응답을_거부한다(String json) {
+        server.expect(requestTo("https://api.openai.com/v1/responses"))
+                .andRespond(withSuccess(responseWithText(json), MediaType.APPLICATION_JSON));
+        assertThatThrownBy(() -> client.analyze("진동 발생"))
+                .isInstanceOf(OpenAiAnalysisException.class);
+        server.verify();
+    }
+
+    private String responseWithText(String json) {
+        return new ObjectMapper().writeValueAsString(java.util.Map.of(
+                "output", java.util.List.of(java.util.Map.of("content", java.util.List.of(
+                        java.util.Map.of("type", "output_text", "text", json))))));
     }
 }

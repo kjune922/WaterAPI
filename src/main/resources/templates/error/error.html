@@ -16,6 +16,7 @@
         }
 
         .error-box {
+            display: block;
             padding: 32px;
             background-color: white;
             border: 1px solid #ddd;
@@ -32,21 +33,28 @@
         .message {
             margin: 24px 0;
             font-size: 18px;
+            line-height: 1.7;
+            word-break: keep-all;
+            overflow-wrap: anywhere;
         }
 
         .details {
             color: #666;
             font-size: 14px;
+            line-height: 1.6;
+            overflow-wrap: anywhere;
         }
 
         .menu {
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
             margin-top: 28px;
         }
 
         .menu a {
             padding: 10px 16px;
+            white-space: nowrap;
             color: white;
             background-color: #2563eb;
             text-decoration: none;
@@ -74,7 +82,7 @@
 
         <p>
             발생 시각:
-            <span th:text="${timestamp}"></span>
+            <span th:text="${#temporals.format(timestamp, 'yyyy-MM-dd HH:mm:ss')}"></span>
         </p>
     </div>
 

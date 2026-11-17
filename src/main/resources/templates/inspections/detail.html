@@ -9,7 +9,7 @@
 
 <h1>점검일지 상세</h1>
 
-<table border="1">
+<table class="detail-table">
     <tbody>
     <tr>
         <th>점검일지 ID</th>
@@ -95,7 +95,7 @@
 </div>
 
 <div th:if="${analysis != null}">
-    <table border="1">
+    <table class="detail-table">
         <tbody>
         <tr>
             <th>요약</th>
@@ -119,7 +119,7 @@
 
         <tr>
             <th>분석 시각</th>
-            <td th:text="${analysis.analyzedAt}"></td>
+            <td th:text="${#temporals.format(analysis.analyzedAt, 'yyyy-MM-dd HH:mm:ss')}"></td>
         </tr>
         </tbody>
     </table>
