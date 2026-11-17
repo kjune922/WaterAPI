@@ -1,0 +1,3 @@
+﻿services:
+  app:
+    image: ${WATERAPI_APP_IMAGE:?Set WATERAPI_APP_IMAGE}
