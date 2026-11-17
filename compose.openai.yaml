@@ -1,0 +1,5 @@
+services:
+  app:
+    environment:
+      SPRING_PROFILES_ACTIVE: prod,openai
+      OPENAI_API_KEY: ${OPENAI_API_KEY:?OPENAI_API_KEY is required}
