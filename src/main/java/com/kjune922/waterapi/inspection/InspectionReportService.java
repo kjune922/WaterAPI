@@ -51,8 +51,9 @@ public class InspectionReportService {
     // 점검일지 업데이트 메소드 추가
 
     /**
-     * 연관관계의 주인인 Ai분석에서 점검일지를 참조하고있으니
-     * 주인쪽인 AI분석일지를 먼저 삭제하고 -> 점검일지를 삭제하는 순서가 옳다
+     * 수정 요청이 성공하면 기존 분석을 무효화한다. 내용과 날짜가 같아도 적용한다.
+     * 내용/날짜 변경과 분석 삭제는 한 트랜잭션으로 성공하거나 함께 롤백한다.
+     * 처리 상태는 현장 업무 상태이므로 분석 삭제로 초기화하지 않는다.
      */
     @Transactional
     public void updateInspection(Long inspectionId, String content, LocalDate inspectionDate){

@@ -45,7 +45,18 @@ dependencies {
 }
 
 tasks.named('test') {
-	useJUnitPlatform()
+	useJUnitPlatform { excludeTags 'mysql' }
+}
+
+// 별도의 빈 MySQL 검증 DB에서만 실행한다. 일반 test는 H2와 Stub을 사용한다.
+tasks.register('mysqlTest', Test) {
+	description = 'Verify transaction boundaries and query counts against MySQL'
+	group = 'verification'
+	testClassesDirs = sourceSets.test.output.classesDirs
+	classpath = sourceSets.test.runtimeClasspath
+	useJUnitPlatform { includeTags 'mysql' }
+	shouldRunAfter tasks.named('test')
+	testLogging { events 'passed', 'failed'; showStandardStreams = true }
 }
 
 tasks.named('bootJar') {

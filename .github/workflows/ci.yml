@@ -7,6 +7,39 @@ on:
 permissions:
   contents: read
 jobs:
+  mysql-test:
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ROOT_PASSWORD: disposable-ci-password
+          MYSQL_ROOT_HOST: "%"
+          MYSQL_DATABASE: waterapi_verification
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -pdisposable-ci-password"
+          --health-interval=5s --health-timeout=5s --health-retries=30
+    env:
+      WATERAPI_TEST_DB_URL: jdbc:mysql://127.0.0.1:3306/waterapi_verification?allowPublicKeyRetrieval=true&useSSL=false&serverTimezone=Asia/Seoul
+      WATERAPI_TEST_DB_USERNAME: root
+      WATERAPI_TEST_DB_PASSWORD: disposable-ci-password
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - run: bash ./gradlew --no-daemon mysqlTest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mysql-test-report
+          path: |
+            build/reports/tests/mysqlTest
+            build/test-results/mysqlTest
   test:
     runs-on: ubuntu-latest
     steps:

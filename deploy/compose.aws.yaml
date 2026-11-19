@@ -1,0 +1,22 @@
+# EC2: docker compose --env-file /opt/waterapi/image.env -f deploy/compose.aws.yaml up -d
+services:
+  app:
+    image: ${WATERAPI_APP_IMAGE:?Set an immutable ECR image tag}
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8080:8080"
+    env_file:
+      - /opt/waterapi/runtime.env
+    environment:
+      SPRING_PROFILES_ACTIVE: prod,stub
+      JAVA_TOOL_OPTIONS: >-
+        -Duser.timezone=Asia/Seoul
+        -Djavax.net.ssl.trustStore=/app/certs/rds-truststore.p12
+        -Djavax.net.ssl.trustStorePassword=changeit
+    volumes:
+      - /opt/waterapi/certs/rds-truststore.p12:/app/certs/rds-truststore.p12:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

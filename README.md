@@ -1,6 +1,3 @@
-> 제출 준비 브랜치의 변경 내역: [코드 읽기와 검증 상태](docs/IMPLEMENTATION_REVIEW.md), [AWS 배포 준비](docs/AWS_RUNBOOK.md).
-> Docker/MySQL 실행 구성과 CI를 추가했으며, 아직 실제 실행 통과 및 AWS 배포 완료를 확인하지 않았습니다.
-
 # WaterAPI
 
 상하수도 시설과 점검일지를 관리하고, 점검 내용을 OpenAI로 분석해 이상 유형, 위험도, 권장 조치를 제공하는 웹 애플리케이션입니다.
@@ -9,6 +6,15 @@
 
 > 개인 프로젝트, Java/Spring Boot 기반
 > AI 분석 결과는 시설 관리자의 판단을 보조하기 위한 참고 정보입니다.
+
+## 핵심 검증
+
+- 점검일지 수정과 기존 분석 삭제를 한 트랜잭션으로 처리합니다. MySQL에서 삭제 오류를 발생시켜 내용/날짜 변경도 함께 롤백되는지 확인했습니다.
+- 점검 목록의 시설명 조회에 EntityGraph를 적용했습니다. 서로 다른 시설/점검 30건, 페이지 10건에서 기존 방식의 JPQL 대조군 12개 SQL → 개선 2개 SQL을 MySQL 8.4.13에서 확인했습니다. 결과/정렬/총건수는 동일하며 응답 시간 개선율을 측정한 수치는 아닙니다.
+- 2026-11-18 작업 사본 검증: Java 테스트 59개, MySQL 테스트 9개 통과, bootJar 생성 성공. 원격 반영과 CI 상태는 별도입니다.
+- 2026-11-17 로컬 기록: Docker/MySQL 실행, 데이터 유지, 별도 DB 복원, 이전 앱 이미지 복구. AWS 배포는 준비 단계입니다.
+
+[검증 결과](docs/VERIFICATION_20261118.md), [MySQL 테스트와 조회 개선](docs/MYSQL_VERIFICATION.md), [로컬 복구 기록](docs/로컬실행검증.md), [주말 AWS 배포](docs/AWS_WEEKEND.md), [학습과 플로우차트](docs/LEARNING_HANDOFF.md)
 
 ![WaterAPI 대시보드](docs/images/dashboard.png)
 
@@ -79,11 +85,12 @@
 | Language | Java 17 |
 | Framework | Spring Boot 4.1.1, Spring MVC |
 | View | Thymeleaf, HTML, CSS |
-| Data | Spring Data JPA, Hibernate, H2 |
+| Data | Spring Data JPA, Hibernate, MySQL 8.4, Flyway, H2 |
 | Validation | Jakarta Bean Validation |
 | AI | OpenAI Responses API, Spring RestClient |
 | Test | JUnit 5, AssertJ, MockMvc |
 | Build | Gradle |
+| 실행 | Docker Compose, GitHub Actions CI |
 | 기타 | Lombok |
 
 ---
@@ -95,7 +102,7 @@ flowchart TD
     Browser["Browser / Thymeleaf"] --> Controller["Controller"]
     Controller --> Service["Service"]
     Service --> Repository["Spring Data JPA"]
-    Repository --> DB["H2 File DB"]
+    Repository --> DB["MySQL / H2"]
 
     Service --> Client["InspectionAiClient"]
     Client --> Stub["Stub Client"]
@@ -166,25 +173,20 @@ erDiagram
 ## AI 분석 처리 흐름
 
 ```mermaid
-sequenceDiagram
-    participant User as 사용자
-    participant Controller as Controller
-    participant Service as AiAnalysisService
-    participant Client as InspectionAiClient
-    participant AI as OpenAI
-    participant DB as Database
-
-    User->>Controller: AI 분석 실행
-    Controller->>Service: analyzeInspection(id)
-    Service->>DB: 점검일지 및 기존 분석 확인
-    Service->>Client: 점검 내용 분석 요청
-    Client->>AI: 구조화된 응답 요청
-    AI-->>Client: JSON 분석 결과
-    Client-->>Service: InspectionAnalysisResponse
-    Service->>DB: AiAnalysis 저장
-    Service-->>Controller: 분석 완료
-    Controller-->>User: 상세 화면 Redirect
+flowchart TD
+    A["분석 요청"] --> B{"점검일지 존재?"}
+    B -->|아니오| C["404"]
+    B -->|예| D{"기존 분석 존재?"}
+    D -->|예| E["409"]
+    D -->|아니오| F["점검 내용 검증"]
+    F --> G["InspectionAiClient 호출"]
+    G --> H{"응답 저장 기준 충족?"}
+    H -->|예| I["분석 저장 후 상세 화면"]
+    H -->|아니오| J["저장 없이 502"]
 ```
+
+입력 내용이 명백히 무의미하거나 실제 AI가 분석 불가로 판단하면 400으로 처리합니다.
+Stub은 고정값이며 실제 AI 추론 결과가 아닙니다. 처리 상태 PENDING/IN_PROGRESS/COMPLETED는 사용자가 변경하는 현장 업무 상태이고 AI 진행 상태가 아닙니다.
 
 OpenAI가 반환한 JSON을 애플리케이션 내부 DTO인 `InspectionAnalysisResponse`로 변환한 후 엔티티로 저장합니다.
 
@@ -291,7 +293,7 @@ OpenAI 요청에 JSON Schema를 지정해 다음 필드를 필수로 반환하�
 ```text
 점검일지 수정
 → 기존 AI 분석 삭제
-→ 미분석 상태로 전환
+→ 분석 결과 없음 (처리 상태는 유지)
 → 수정된 내용으로 재분석
 ```
 
@@ -511,12 +513,11 @@ src/main/java/com/kjune922/waterapi
 
 ## 한계 및 개선 방향
 
-- 기본 로컬 저장소는 H2 파일 DB입니다. MySQL, Flyway 구성은 prod 프로필과 compose.yaml에 추가했으며 실행 검증이 필요합니다.
-- OpenAI 분석은 동기 방식이므로 요청 시간이 길어질 수 있습니다.
-- 외부 API 장애에 대한 재시도와 타임아웃 정책을 보완할 필요가 있습니다.
-- 사용자 인증과 시설 관리자별 권한 구분이 구현되어 있지 않습니다.
-- 운영 환경에서는 API 키를 AWS Systems Manager Parameter Store 등의 보안 저장소로 관리할 수 있습니다.
-- 향후 Docker 기반 실행 환경과 CI/CD를 추가할 수 있습니다.
+- OpenAI 분석은 동기 호출이며 서비스 트랜잭션 내부에서 실행됩니다. 연결 5초, 응답 30초 제한을 적용했고 자동 재시도는 없습니다.
+- 중복 분석의 사전 조회와 DB UNIQUE 제약은 존재하지만 동시 요청의 중복 유료 호출이나 수정과 분석의 경합을 해결한 것은 아닙니다.
+- 사용자 인증, 고객사별 데이터 분리, 권한 구분, 수평 확장은 구현하지 않았습니다. 인터넷 전체 공개 데모로 배포하지 않습니다.
+- AWS 배포는 준비 단계입니다. 로컬 Docker 실행, 백업 복원, 이미지 롤백과 구분합니다.
+- 조회 개선은 점검일지 목록의 시설명 조회에 한정합니다. 전체 페이지 성능, 대용량 처리, 모든 연관 조회의 최적화를 주장하지 않습니다.
 
 ---
 
@@ -536,6 +537,6 @@ src/main/java/com/kjune922/waterapi
 Windows PowerShell에서는 `bash gradlew` 대신 `.\gradlew.bat`를 사용합니다.
 MySQL 프로필은 `WATERAPI_DB_URL`, `WATERAPI_DB_USERNAME`, `WATERAPI_DB_PASSWORD` 환경변수가 필요합니다. OpenAI 프로필은 `OPENAI_API_KEY`가 필요합니다. 비밀번호와 API 키를 커밋하지 않습니다.
 
-현재 MySQL 프로필은 로컬 통합 확인용입니다. 운영 배포 전 마이그레이션과 스키마 검증 구성을 추가합니다.
+`mysql` 프로필은 로컬 개발용 `ddl-auto=update`입니다. 배포용 `prod`는 Flyway V1과 `ddl-auto=validate`를 사용합니다. 새 빈 DB에서 시작하며 기존 DB에 임의로 baseline을 적용하지 않습니다.
 
 Docker와 새 MySQL DB로 실행하는 방법은 [실행 안내](docs/IMPLEMENTATION_REVIEW.md#5-직접-실행)를 참고하세요.
