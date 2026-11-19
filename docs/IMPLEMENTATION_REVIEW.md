@@ -51,30 +51,18 @@ Docker Desktop이 실행 중인 로컬 환경에서:
 위 명령은 DB 볼륨을 보존한다. down -v는 데이터까지 삭제하므로 초기화할 때만 사용한다.
 
 ## 6. 현재 검증 상태와 남은 과제
-- git diff --check: 통과.
-- Gradle 테스트: 실행 시도했으나 배포 파일 다운로드가 Network is unreachable로 실패. 테스트 통과를 확인하지 못함.
-- Docker, MySQL 마이그레이션: 이 환경에서 실행 결과 미확인.
-- GitHub CI: 테스트와 MySQL 기동 검증 작업을 추가. Git push 인증 실패 및 연결 앱의 쓰기 권한 403으로 업로드되지 않아 실행되지 않음.
-- 실제 OpenAI 응답, AWS 배포: 미실행.
-- 현재 AI 호출은 트랜잭션 내부에 있다. 동시 분석 시 중복 저장은 DB UNIQUE로 막지만, 외부 API 중복 호출과 일지 수정 경쟁은 아직 해결하지 않았다.
-- 공개 서비스용 인증, CSRF 보호, 호출 제한은 아직 미구현. 현재 배포 구성은 접근을 제한한 개인 데모 범위로 사용한다.
-- 기존 application-secret.properties가 Git에 추적되고 있었다. 현재 파일 삭제만으로 과거 노출이 없어지지 않는다. 사용했던 실제 DB 비밀번호는 교체해야 한다.
 
-지원서에는 아직 'AWS 운영 완료', '동시성 해결', '테스트 전체 통과'라고 쓰지 않는다.
+2026-11-17에 로컬 Docker/MySQL, 실제 OpenAI, 백업 복원, 이전 이미지 복구를 확인한 기록은 [로컬 실행 검증](로컬실행검증.md)에 있다. 초기 작성 시의 네트워크 오류는 당시 상태이며 현재 결과와 혼동하지 않는다.
 
+2026-11-18 코드 변경과 재실행 결과는 [최신 검증 결과](VERIFICATION_20261118.md)를 기준으로 한다. GitHub의 이전 성공 실행과 이번 작업 사본의 테스트 결과도 구분한다.
 
-## 7. 다운로드한 소스를 기존 Git 저장소에 반영하기
-압축에는 Git 이력과 개인 설정 파일이 포함되어 있지 않다.
-기존 로컬 저장소의 미커밋 작업을 먼저 보관한 뒤 별도 브랜치에서 변경을 비교한다.
-    git switch -c portfolio/dataspira-ready
-압축의 WaterAPI 폴더 내용을 기존 저장소에 복사한다. 기존 .git 폴더는 그대로 둔다.
-application-secret.properties는 압축에 없으므로 기존 파일이 추적 중이면 다음 명령으로 추적만 해제한다.
-    git rm --cached --ignore-unmatch src/main/resources/application-secret.properties
-기존 로컬 파일은 개인 보관할 수 있으나 이번 설정은 환경변수를 사용한다.
-    git diff --check
-    ./gradlew test
-    git add .
-    git commit -m "Prepare AI validation and container verification"
-    git push -u origin portfolio/dataspira-ready
-Windows PowerShell에서는 ./gradlew 대신 .\gradlew.bat를 사용할 수 있다.
-GitHub Actions에서 두 작업의 결과를 확인한 뒤 main 반영을 결정한다.
+- 현재 AI 호출은 트랜잭션 내부에 있다. 동시 분석 시 중복 저장은 DB UNIQUE로 막지만 외부 API 중복 호출과 일지 수정 경합은 해결하지 않았다.
+- 인증, 고객사별 권한, 호출 제한은 미구현이다. AWS 데모는 SSM 포트 포워딩으로 접근한다.
+- 과거 secret 파일 삭제만으로 노출된 값이 무효화되지는 않는다. 이전에 사용한 실제 비밀번호 교체 여부는 별도로 관리한다.
+- 실제 AWS 배포는 미완료다. [주말 실행안](AWS_WEEKEND.md)의 완료 기록을 확보한 뒤 지원서에 반영한다.
+
+## 7. 이번 작업을 기존 저장소에 적용
+
+전체 저장소를 덮어쓰지 않고 제공한 `WaterAPI.patch`를 별도 브랜치에 적용한다. 패키지의 적용 안내에서 기준 커밋과 `git apply --check`를 확인한다. 로컬 수정이 있으면 먼저 별도 커밋 또는 보관하고 강제 초기화하지 않는다.
+
+적용 후 Java 테스트, MySQL 검증, Docker smoke를 실행하고 결과를 확인한 다음 main 반영을 결정한다. 본인이 코드 흐름을 설명할 수 있도록 [학습 인수인계](LEARNING_HANDOFF.md)의 순서대로 읽는다.
