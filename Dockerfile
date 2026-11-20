@@ -1,4 +1,5 @@
 FROM eclipse-temurin:17-jdk AS build
+ENV JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"
 WORKDIR /workspace
 COPY gradlew build.gradle settings.gradle ./
 COPY gradle ./gradle
@@ -6,6 +7,7 @@ COPY src ./src
 RUN sh ./gradlew --no-daemon bootJar
 
 FROM eclipse-temurin:17-jre
+ENV JAVA_TOOL_OPTIONS="-XX:-UseBASE64Intrinsics"
 WORKDIR /app
 RUN groupadd --system waterapi && useradd --system --gid waterapi waterapi \
     && mkdir /app/data && chown waterapi:waterapi /app/data
