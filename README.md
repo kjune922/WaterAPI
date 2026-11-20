@@ -9,12 +9,14 @@
 
 ## 핵심 검증
 
-- 점검일지 수정과 기존 분석 삭제를 한 트랜잭션으로 처리합니다. MySQL에서 삭제 오류를 발생시켜 내용/날짜 변경도 함께 롤백되는지 확인했습니다.
-- 점검 목록의 시설명 조회에 EntityGraph를 적용했습니다. 서로 다른 시설/점검 30건, 페이지 10건에서 기존 방식의 JPQL 대조군 12개 SQL → 개선 2개 SQL을 MySQL 8.4.13에서 확인했습니다. 결과/정렬/총건수는 동일하며 응답 시간 개선율을 측정한 수치는 아닙니다.
-- 2026-11-18 작업 사본 검증: Java 테스트 59개, MySQL 테스트 9개 통과, bootJar 생성 성공. 원격 반영과 CI 상태는 별도입니다.
-- 2026-11-17 로컬 기록: Docker/MySQL 실행, 데이터 유지, 별도 DB 복원, 이전 앱 이미지 복구. AWS 배포는 준비 단계입니다.
+- **변경 일관성:** 점검일지 수정과 기존 분석 삭제를 한 트랜잭션으로 처리합니다. 실제 MySQL에서 분석 삭제 오류를 발생시켜 내용과 날짜 변경도 함께 롤백되는지 확인했습니다.
+- **조회 SQL 12회 → 2회:** 시설명이 필요한 점검 목록에 EntityGraph를 적용했습니다. 서로 다른 시설과 점검일지 30건, 첫 페이지 10건을 기준으로 MySQL 8.4.13에서 비교했습니다. 결과, 정렬, 전체 건수는 동일하며 응답 시간 개선율을 측정한 수치는 아닙니다.
+- **테스트와 CI:** 2026-11-18 작업 사본에서 Java 테스트 59개와 MySQL 테스트 9개, bootJar 생성을 확인했습니다. 이후 main 반영 커밋 `943ef87`의 [GitHub Actions](https://github.com/kjune922/WaterAPI/actions/runs/44434881044)에서 `test`, `mysql-test`, `mysql-smoke`가 모두 성공했습니다.
+- **AWS 실행:** 2026-11-19, 커밋 태그의 이미지를 ECR에 업로드하고 EC2에서 실행했습니다. 비공개 RDS MySQL에 TLS 인증서 검증을 적용해 연결하고 Flyway, health UP, SSM 경유 화면 접속을 확인했습니다.
+- **AWS 데이터 유지:** `prod,stub`에서 시설과 점검일지 등록, 분석, 수정 후 재분석을 확인했습니다. 컨테이너 교체 후에도 데이터가 유지됐습니다. 실제 OpenAI 호출은 11월 17일 로컬 Docker에서 확인한 별도 결과입니다.
+- **로컬 복구:** Docker와 MySQL 실행, 별도 DB에 SQL 덤프 복원, 이전 앱 이미지로의 복구를 확인했습니다. AWS에서 RDS 복원이나 이미지 롤백을 검증한 결과는 아닙니다.
 
-[검증 결과](docs/VERIFICATION_20261118.md), [MySQL 테스트와 조회 개선](docs/MYSQL_VERIFICATION.md), [로컬 복구 기록](docs/로컬실행검증.md), [주말 AWS 배포](docs/AWS_WEEKEND.md), [학습과 플로우차트](docs/LEARNING_HANDOFF.md)
+[최신 AWS 검증 기록](docs/AWS_VERIFICATION_20261119.md), [11월 18일 테스트 기록](docs/VERIFICATION_20261118.md), [MySQL 테스트와 조회 개선](docs/MYSQL_VERIFICATION.md), [로컬 복구 기록](docs/로컬실행검증.md), [AWS 실행 절차](docs/AWS_WEEKEND.md), [학습과 플로우차트](docs/LEARNING_HANDOFF.md)
 
 ![WaterAPI 대시보드](docs/images/dashboard.png)
 
@@ -90,8 +92,28 @@
 | AI | OpenAI Responses API, Spring RestClient |
 | Test | JUnit 5, AssertJ, MockMvc |
 | Build | Gradle |
-| 실행 | Docker Compose, GitHub Actions CI |
+| 실행 | Docker Compose, GitHub Actions CI, ECR, EC2, RDS, Systems Manager |
 | 기타 | Lombok |
+
+---
+
+## AWS 실행 검증
+
+2026-11-19에 Windows PC에서 이미지를 ECR에 업로드한 뒤, EC2에서 pull과 Docker Compose로 실행했습니다. AWS 배포는 수동으로 진행했으며 CI는 테스트와 실행 검증을 담당합니다.
+
+| 확인 항목 | 결과 |
+| --- | --- |
+| 실행 버전 | 소스 커밋 `943ef8799dc3016f4a3d7de507808c39aaf5434c` |
+| 실행 환경 | EC2 Ubuntu, RDS MySQL 8.4.11, `prod,stub` |
+| DB 접근 | RDS 공개 접근 비활성화, EC2 보안 그룹에서 3306 허용, `sslMode=VERIFY_IDENTITY` |
+| 초기화 | Flyway V1 적용, JPA 스키마 검증, 앱 기동 성공 |
+| 접속 | 앱은 `127.0.0.1:8080`에 바인딩, SSM 포트 포워딩으로 화면 확인 |
+| 기능 | 시설 1건, 점검일지 1건, Stub 분석 1건, 수정 후 기존 분석 무효화와 재분석 |
+| 컨테이너 교체 | 컨테이너 ID 변경, `/actuator/health`의 `UP`, 데이터 유지 확인 |
+
+같은 EC2와 RDS 인스턴스를 CloudGuard와 공유하되 DB와 앱 계정은 분리했습니다. 메모리와 8080 포트를 고려해 두 앱을 번갈아 실행했습니다. 실습 종료 후 EC2와 RDS를 중지했고, 11월 20일 연결된 Elastic IP 반납을 확인했습니다. 상시 공개 데모는 운영하지 않습니다.
+
+배포 이미지 digest, 확인 순서와 검증 범위는 [AWS 검증 기록](docs/AWS_VERIFICATION_20261119.md)에 정리했습니다.
 
 ---
 
@@ -450,7 +472,7 @@ addErrorAttributes(
 ./gradlew.bat test
 ```
 
-테스트는 `src/test/resources/application.properties`의 별도 인메모리 DB를 사용합니다.
+기본 `test`는 별도 H2 인메모리 DB를 사용합니다. `mysqlTest`는 실제 MySQL에서 수정, 삭제, 롤백과 조회 SQL 횟수를 검증하는 별도 작업입니다. 실행 설정은 [MySQL 검증 안내](docs/MYSQL_VERIFICATION.md)를 참고하세요.
 
 ---
 
@@ -516,7 +538,7 @@ src/main/java/com/kjune922/waterapi
 - OpenAI 분석은 동기 호출이며 서비스 트랜잭션 내부에서 실행됩니다. 연결 5초, 응답 30초 제한을 적용했고 자동 재시도는 없습니다.
 - 중복 분석의 사전 조회와 DB UNIQUE 제약은 존재하지만 동시 요청의 중복 유료 호출이나 수정과 분석의 경합을 해결한 것은 아닙니다.
 - 사용자 인증, 고객사별 데이터 분리, 권한 구분, 수평 확장은 구현하지 않았습니다. 인터넷 전체 공개 데모로 배포하지 않습니다.
-- AWS 배포는 준비 단계입니다. 로컬 Docker 실행, 백업 복원, 이미지 롤백과 구분합니다.
+- ECR, EC2, 비공개 RDS를 통한 수동 배포는 확인했습니다. AWS에서의 실제 OpenAI 호출, RDS 백업 복원, 이전 이미지 롤백과 자동 배포는 이번 검증 범위에 포함하지 않습니다.
 - 조회 개선은 점검일지 목록의 시설명 조회에 한정합니다. 전체 페이지 성능, 대용량 처리, 모든 연관 조회의 최적화를 주장하지 않습니다.
 
 ---
@@ -540,3 +562,4 @@ MySQL 프로필은 `WATERAPI_DB_URL`, `WATERAPI_DB_USERNAME`, `WATERAPI_DB_PASSW
 `mysql` 프로필은 로컬 개발용 `ddl-auto=update`입니다. 배포용 `prod`는 Flyway V1과 `ddl-auto=validate`를 사용합니다. 새 빈 DB에서 시작하며 기존 DB에 임의로 baseline을 적용하지 않습니다.
 
 Docker와 새 MySQL DB로 실행하는 방법은 [실행 안내](docs/IMPLEMENTATION_REVIEW.md#5-직접-실행)를 참고하세요.
+
