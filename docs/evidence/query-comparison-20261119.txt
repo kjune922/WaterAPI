@@ -1,2 +1,0 @@
-﻿QUERY_COMPARISON filtered=false rows=30 pageSize=10 before=12 after=2
-QUERY_COMPARISON filtered=true rows=30 pageSize=10 before=12 after=2
