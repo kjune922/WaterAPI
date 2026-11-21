@@ -2,11 +2,13 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>점검일지 수정</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>점검일지 수정 · WaterAPI</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
-
+<header th:replace="~{fragments/header :: header('inspections')}"></header>
+<main id="main">
 <h1>점검일지 수정</h1>
 
 <p>
@@ -14,7 +16,7 @@
     수정 완료 후 다시 AI 분석을 실행해주세요.
 </p>
 
-<form th:action="@{/inspections/{id}/edit(id=${inspectionId})}"
+<form class="panel edit-form" th:action="@{/inspections/{id}/edit(id=${inspectionId})}"
       th:object="${inspectionForm}"
       method="post">
 
@@ -27,12 +29,10 @@
                   cols="60">
         </textarea>
 
-        <div th:errors="*{content}">
+        <div class="field-error" th:errors="*{content}">
             점검 내용 오류
         </div>
     </div>
-
-    <br>
 
     <div>
         <label for="inspectionDate">점검 일자</label>
@@ -41,21 +41,14 @@
                type="date"
                th:field="*{inspectionDate}">
 
-        <div th:errors="*{inspectionDate}">
+        <div class="field-error" th:errors="*{inspectionDate}">
             점검 일자 오류
         </div>
     </div>
 
-    <br>
-
     <button type="submit">수정 완료</button>
+    <a th:href="@{/inspections/{id}(id=${inspectionId})}">수정 취소</a>
 </form>
-
-<br>
-
-<a th:href="@{/inspections/{id}(id=${inspectionId})}">
-    수정 취소
-</a>
-
+</main>
 </body>
 </html>

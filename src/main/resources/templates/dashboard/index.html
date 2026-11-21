@@ -2,200 +2,67 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>WaterAPI 대시보드</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>대시보드 · WaterAPI</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
-
-    <style>
-        body {
-            max-width: 1100px;
-            margin: 40px auto;
-            padding: 0 20px;
-            font-family: Arial, sans-serif;
-            background-color: #f5f7fa;
-            color: #222;
-        }
-
-        h1 {
-            margin-bottom: 8px;
-        }
-
-        .description {
-            color: #666;
-            margin-bottom: 30px;
-        }
-
-        .menu {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 32px;
-        }
-
-        .menu a {
-            padding: 10px 16px;
-            color: white;
-            background-color: #2563eb;
-            text-decoration: none;
-            border-radius: 6px;
-        }
-
-        .section {
-            margin-bottom: 36px;
-        }
-
-        .cards {
-            display: grid;
-            grid-template-columns:
-                    repeat(auto-fit, minmax(180px, 1fr));
-            gap: 16px;
-        }
-
-        .card {
-            padding: 22px;
-            background-color: white;
-            border: 1px solid #ddd;
-            border-radius: 10px;
-        }
-
-        .card-title {
-            margin-bottom: 12px;
-            color: #666;
-            font-size: 15px;
-        }
-
-        .card-count {
-            font-size: 30px;
-            font-weight: bold;
-        }
-
-        .pending {
-            border-left: 6px solid #64748b;
-        }
-
-        .progress {
-            border-left: 6px solid #2563eb;
-        }
-
-        .completed {
-            border-left: 6px solid #16a34a;
-        }
-
-        .normal {
-            border-left: 6px solid #16a34a;
-        }
-
-        .caution {
-            border-left: 6px solid #f59e0b;
-        }
-
-        .warning {
-            border-left: 6px solid #dc2626;
-        }
-    </style>
 </head>
-
 <body>
-
-<h1>WaterAPI 대시보드</h1>
-
-<p class="description">
-    상하수도 시설 점검 및 AI 분석 현황
-</p>
-
-<nav class="menu">
-    <a th:href="@{/facilities}">시설 관리</a>
-    <a th:href="@{/inspections}">점검일지 관리</a>
-    <a th:href="@{/analyses}">AI 분석 결과</a>
-</nav>
-
-<section class="section">
-    <h2>전체 현황</h2>
-
-    <div class="cards">
-        <div class="card">
-            <div class="card-title">등록 시설</div>
-            <div class="card-count"
-                 th:text="${summary.facilityCount}">
-                0
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">전체 점검일지</div>
-            <div class="card-count"
-                 th:text="${summary.inspectionCount}">
-                0
-            </div>
-        </div>
-
-        <div class="card">
-            <div class="card-title">AI 분석 완료</div>
-            <div class="card-count"
-                 th:text="${summary.analysisCount}">
-                0
-            </div>
-        </div>
-    </div>
-</section>
-
-<section class="section">
-    <h2>점검 처리 상태</h2>
-
-    <div class="cards">
-        <div class="card pending">
-            <div class="card-title">대기</div>
-            <div class="card-count"
-                 th:text="${summary.pendingCount}">
-                0
-            </div>
-        </div>
-
-        <div class="card progress">
-            <div class="card-title">처리 중</div>
-            <div class="card-count"
-                 th:text="${summary.inProgressCount}">
-                0
-            </div>
-        </div>
-
-        <div class="card completed">
-            <div class="card-title">처리 완료</div>
-            <div class="card-count"
-                 th:text="${summary.completedCount}">
-                0
-            </div>
-        </div>
-    </div>
-</section>
-
-<section class="section">
-    <h2>AI 위험도 현황</h2>
-
-    <div class="cards">
-        <div class="card normal">
-            <div class="card-title">정상</div>
-            <div class="card-count"
-                 th:text="${summary.normalCount}">
-                0
-            </div>
-        </div>
-
-        <div class="card caution">
-            <div class="card-title">주의</div>
-            <div class="card-count"
-                 th:text="${summary.cautionCount}">
-                0
-            </div>
-        </div>
-
-        <div class="card warning">
-            <div class="card-title">위험</div>
-            <div class="card-count"
-                 th:text="${summary.warningCount}">
-                0
-            </div>
-        </div>
-    </div>
-</section>
-
+<header th:replace="~{fragments/header :: header('dashboard')}"></header>
+<main id="main">
+<div class="page-heading">
+    <div><h1>대시보드</h1><p>상하수도 시설 점검 및 AI 분석 현황</p></div>
+    <a class="primary" th:href="@{/inspections/new}">＋ 점검일지 등록</a>
+</div>
+<div class="metrics">
+    <a class="metric" th:href="@{/facilities}">
+        <div class="metric-label"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M3 20V8l6 3V7l6 3V4h4l2 16H3Z"/><path d="M7 16h2m3 0h2"/></svg>등록 시설</div>
+        <strong th:text="${summary.facilityCount}"></strong><span class="metric-arrow" aria-hidden="true">↗</span>
+    </a>
+    <a class="metric" th:href="@{/inspections}">
+        <div class="metric-label"><svg aria-hidden="true" viewBox="0 0 24 24"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V2h6v2M9 10h6m-6 4h6"/></svg>전체 점검일지</div>
+        <strong th:text="${summary.inspectionCount}"></strong><span class="metric-arrow" aria-hidden="true">↗</span>
+    </a>
+    <a class="metric" th:href="@{/analyses}">
+        <div class="metric-label"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/></svg>AI 분석 결과</div>
+        <strong th:text="${summary.analysisCount}"></strong><span class="metric-arrow" aria-hidden="true">↗</span>
+    </a>
+</div>
+<div class="two-cols">
+    <section class="panel overview">
+        <h2>점검 처리 상태</h2>
+        <ul class="counts">
+            <li><a th:href="@{/inspections(processingStatus=PENDING)}">
+                <span class="badge PENDING">대기</span>
+                <strong th:text="${summary.pendingCount}"></strong><span aria-hidden="true">›</span>
+            </a></li>
+            <li><a th:href="@{/inspections(processingStatus=IN_PROGRESS)}">
+                <span class="badge IN_PROGRESS">처리 중</span>
+                <strong th:text="${summary.inProgressCount}"></strong><span aria-hidden="true">›</span>
+            </a></li>
+            <li><a th:href="@{/inspections(processingStatus=COMPLETED)}">
+                <span class="badge COMPLETED">처리 완료</span>
+                <strong th:text="${summary.completedCount}"></strong><span aria-hidden="true">›</span>
+            </a></li>
+        </ul>
+    </section>
+    <section class="panel overview">
+        <h2>AI 분석 위험도</h2>
+        <ul class="counts">
+            <li><a th:href="@{/analyses(riskLevel=NORMAL)}">
+                <span class="badge NORMAL">정상</span>
+                <strong th:text="${summary.normalCount}"></strong><span aria-hidden="true">›</span>
+            </a></li>
+            <li><a th:href="@{/analyses(riskLevel=CAUTION)}">
+                <span class="badge CAUTION">주의</span>
+                <strong th:text="${summary.cautionCount}"></strong><span aria-hidden="true">›</span>
+            </a></li>
+            <li><a th:href="@{/analyses(riskLevel=WARNING)}">
+                <span class="badge WARNING">위험</span>
+                <strong th:text="${summary.warningCount}"></strong><span aria-hidden="true">›</span>
+            </a></li>
+        </ul>
+    </section>
+</div>
+</main>
 </body>
 </html>

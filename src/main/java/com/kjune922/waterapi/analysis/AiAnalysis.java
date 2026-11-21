@@ -5,6 +5,7 @@ import com.kjune922.waterapi.inspection.InspectionReport;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.hibernate.annotations.ColumnDefault;
 
 import java.time.LocalDateTime;
 
@@ -37,6 +38,25 @@ public class AiAnalysis {
 
     @Column(nullable = false)
     private LocalDateTime analyzedAt;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @ColumnDefault("'PENDING_REVIEW'")
+    private AnalysisReviewStatus reviewStatus = AnalysisReviewStatus.PENDING_REVIEW;
+
+    @Column(length = 500)
+    private String confirmedSummary;
+
+    @Column(length = 100)
+    private String confirmedAbnormalityType;
+
+    @Enumerated(EnumType.STRING)
+    private RiskLevel confirmedRiskLevel;
+
+    @Column(length = 1000)
+    private String confirmedRecommendedAction;
+
+    private LocalDateTime confirmedAt;
 
     public AiAnalysis(InspectionReport inspectionReport, String summary, String abnormalityType, RiskLevel riskLevel, String recommendedAction, LocalDateTime analyzedAt) {
         this.inspectionReport = inspectionReport;

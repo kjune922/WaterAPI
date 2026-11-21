@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<body>
+<header class="masthead" th:fragment="header(active)">
+    <a href="#main" class="skip">본문으로 이동</a>
+    <div class="mast-inner">
+        <a class="brand" th:href="@{/}" aria-label="WaterAPI 대시보드">
+            <span class="brand-mark" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+                    <path d="M12 2.5C10 6 5 10.5 5 15a7 7 0 0 0 14 0c0-4.5-5-9-7-12.5Z"/>
+                    <path d="M8.5 15.2a3.5 3.5 0 0 0 3.5 3.5"/>
+                </svg>
+            </span>
+            WaterAPI
+        </a>
+        <nav aria-label="주 메뉴">
+            <a th:href="@{/}" th:attr="aria-current=${active == 'dashboard' ? 'page' : null}">대시보드</a>
+            <a th:href="@{/facilities}" th:attr="aria-current=${active == 'facilities' ? 'page' : null}">시설</a>
+            <a th:href="@{/inspections}" th:attr="aria-current=${active == 'inspections' ? 'page' : null}">점검일지</a>
+            <a th:href="@{/analyses}" th:attr="aria-current=${active == 'analyses' ? 'page' : null}">AI 분석</a>
+        </nav>
+    </div>
+</header>
+</body>
+</html>
