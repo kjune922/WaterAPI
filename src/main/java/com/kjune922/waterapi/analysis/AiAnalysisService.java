@@ -3,23 +3,28 @@ package com.kjune922.waterapi.analysis;
 import com.kjune922.waterapi.client.InspectionAiClient;
 import com.kjune922.waterapi.domain.RiskLevel;
 import com.kjune922.waterapi.dto.InspectionAnalysisResponse;
+import com.kjune922.waterapi.exception.AlreadyConfirmedException;
 import com.kjune922.waterapi.exception.DuplicateAnalysisException;
 import com.kjune922.waterapi.exception.OpenAiAnalysisException;
 import com.kjune922.waterapi.exception.ResourceNotFoundException;
 import com.kjune922.waterapi.inspection.InspectionReport;
 import com.kjune922.waterapi.inspection.InspectionReportRepository;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 @Service
+@Validated
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AiAnalysisService {
@@ -79,6 +84,19 @@ public class AiAnalysisService {
         if (text == null || text.isBlank() || text.length() > maximumLength) {
             throw new OpenAiAnalysisException("AI 분석 결과의 내용 또는 길이가 저장 기준에 맞지 않습니다.");
         }
+    }
+
+    @Transactional
+    public void confirm(Long inspectionId, Long analysisId, @NotNull @Valid AiAnalysisConfirmForm form) {
+        int changed = aiAnalysisRepository.confirmPending(inspectionId, analysisId, form.getSummary(),
+                form.getAbnormalityType(), form.getRiskLevel(), form.getRecommendedAction(), LocalDateTime.now());
+        if (changed == 1) {
+            return;
+        }
+        if (aiAnalysisRepository.existsByIdAndInspectionReportId(analysisId, inspectionId)) {
+            throw new AlreadyConfirmedException();
+        }
+        throw new ResourceNotFoundException("해당 점검일지의 분석을 찾을 수 없습니다.");
     }
 
     public Optional<AiAnalysis> findAnalysis(Long inspectionReportId) {

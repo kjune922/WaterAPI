@@ -1,5 +1,10 @@
 package com.kjune922.waterapi.inspection;
 
+import com.kjune922.waterapi.analysis.AiAnalysis;
+import com.kjune922.waterapi.analysis.AiAnalysisConfirmForm;
+import com.kjune922.waterapi.analysis.AiAnalysisService;
+import com.kjune922.waterapi.analysis.AnalysisReviewStatus;
+import com.kjune922.waterapi.exception.AlreadyConfirmedException;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -10,6 +15,11 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.time.LocalDate;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -21,6 +31,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class InspectionMutationMySqlTest {
     @Autowired InspectionReportService service;
     @Autowired JdbcTemplate jdbc;
+    @Autowired AiAnalysisService analyses;
 
     @BeforeEach
     void seedCommittedRows() {
@@ -45,6 +56,7 @@ class InspectionMutationMySqlTest {
 
     @Test
     void 수정_커밋은_내용과_날짜를_바꾸고_해당_분석만_삭제한다() {
+        confirmOriginal();
         service.updateInspection(1L, "수정한 점검 내용", LocalDate.of(2026, 11, 18));
         assertThat(content()).isEqualTo("수정한 점검 내용");
         assertThat(date()).isEqualTo(LocalDate.of(2026, 11, 18));
@@ -71,9 +83,11 @@ class InspectionMutationMySqlTest {
 
     @Test
     void DB가_분석_삭제를_거부하면_내용과_날짜_변경도_롤백한다() {
+        AiAnalysis confirmed = confirmOriginal();
         rejectAnalysisDelete();
         assertThatThrownBy(() -> service.updateInspection(1L, "롤백될 내용", LocalDate.of(2026, 11, 18)))
                 .isInstanceOf(RuntimeException.class).hasStackTraceContaining("intentional test failure");
+        assertConfirmedPreserved(confirmed);
         assertThat(content()).isEqualTo("기존 내용");
         assertThat(date()).isEqualTo(LocalDate.of(2026, 11, 17));
         assertThat(analysisCount(1)).isEqualTo(1);
@@ -82,6 +96,7 @@ class InspectionMutationMySqlTest {
 
     @Test
     void 점검_삭제는_분석을_함께_삭제하고_다른_점검과_시설은_보존한다() {
+        confirmOriginal();
         service.deleteInspection(1L);
         assertThat(jdbc.queryForObject("SELECT COUNT(*) FROM inspection_reports WHERE id=1", Long.class)).isZero();
         assertThat(analysisCount(1)).isZero();
@@ -91,9 +106,11 @@ class InspectionMutationMySqlTest {
 
     @Test
     void 점검_삭제_중_분석_삭제가_실패하면_두_기록_모두_보존한다() {
+        AiAnalysis confirmed = confirmOriginal();
         rejectAnalysisDelete();
         assertThatThrownBy(() -> service.deleteInspection(1L))
                 .isInstanceOf(RuntimeException.class).hasStackTraceContaining("intentional test failure");
+        assertConfirmedPreserved(confirmed);
         assertThat(content()).isEqualTo("기존 내용");
         assertThat(analysisCount(1)).isEqualTo(1);
     }
@@ -104,6 +121,52 @@ class InspectionMutationMySqlTest {
                 .isInstanceOf(com.kjune922.waterapi.exception.ResourceNotFoundException.class);
         assertThat(content()).isEqualTo("기존 내용");
         assertThat(analysisCount(1)).isEqualTo(1);
+    }
+
+    private AiAnalysis confirmOriginal() {
+        AiAnalysis original = analyses.findAnalysis(1L).orElseThrow();
+        analyses.confirm(1L, original.getId(), AiAnalysisConfirmForm.from(original));
+        AiAnalysis confirmed = analyses.findAnalysis(1L).orElseThrow();
+        assertThat(confirmed.getConfirmedSummary()).isEqualTo(original.getSummary());
+        assertThat(confirmed.getConfirmedAt()).isNotNull();
+        return confirmed;
+    }
+
+    private void assertConfirmedPreserved(AiAnalysis before) {
+        AiAnalysis after = analyses.findAnalysis(1L).orElseThrow();
+        assertThat(after.getReviewStatus()).isEqualTo(AnalysisReviewStatus.CONFIRMED);
+        assertThat(after.getConfirmedSummary()).isEqualTo(before.getConfirmedSummary());
+        assertThat(after.getConfirmedAt()).isEqualTo(before.getConfirmedAt());
+    }
+
+    @Test
+    void 동시_확정은_한_요청만_성공하고_그_요청의_값을_보존한다() throws Exception {
+        AiAnalysis original = analyses.findAnalysis(1L).orElseThrow();
+        CyclicBarrier start = new CyclicBarrier(2);
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+        try {
+            Future<Boolean> first = pool.submit(() -> tryConfirm(original, "첫 번째", start));
+            Future<Boolean> second = pool.submit(() -> tryConfirm(original, "두 번째", start));
+            boolean firstWon = first.get(20, TimeUnit.SECONDS);
+            assertThat(second.get(20, TimeUnit.SECONDS)).isNotEqualTo(firstWon);
+            AiAnalysis result = analyses.findAnalysis(1L).orElseThrow();
+            assertThat(result.getConfirmedSummary()).isEqualTo(firstWon ? "첫 번째" : "두 번째");
+            assertThat(result.getConfirmedAt()).isNotNull();
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    private boolean tryConfirm(AiAnalysis original, String summary, CyclicBarrier start) throws Exception {
+        AiAnalysisConfirmForm form = AiAnalysisConfirmForm.from(original);
+        form.setSummary(summary);
+        start.await(10, TimeUnit.SECONDS);
+        try {
+            analyses.confirm(1L, original.getId(), form);
+            return true;
+        } catch (AlreadyConfirmedException expected) {
+            return false;
+        }
     }
 
     private void rejectAnalysisDelete() {

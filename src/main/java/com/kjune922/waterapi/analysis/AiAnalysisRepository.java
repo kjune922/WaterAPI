@@ -5,10 +5,28 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 public interface AiAnalysisRepository extends JpaRepository<AiAnalysis, Long> {
+
+    @Modifying(flushAutomatically = true, clearAutomatically = true)
+    @Query("""
+            update AiAnalysis a
+               set a.confirmedSummary = :summary, a.confirmedAbnormalityType = :abnormalityType,
+                   a.confirmedRiskLevel = :riskLevel, a.confirmedRecommendedAction = :recommendedAction,
+                   a.confirmedAt = :confirmedAt, a.reviewStatus = CONFIRMED
+             where a.inspectionReport.id = :inspectionId and a.id = :analysisId
+               and a.reviewStatus = PENDING_REVIEW
+            """)
+    int confirmPending(Long inspectionId, Long analysisId, String summary, String abnormalityType,
+                       RiskLevel riskLevel, String recommendedAction, LocalDateTime confirmedAt);
+
+    boolean existsByIdAndInspectionReportId(Long id, Long inspectionReportId);
 
     // 이미 분석된 점검일지 인지 체크
     boolean existsByInspectionReportId(Long inspectionReportId);
