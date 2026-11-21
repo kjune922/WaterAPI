@@ -2,131 +2,74 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>점검일지 상세</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>점검일지 상세 · WaterAPI</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
+<header th:replace="~{fragments/header :: header('inspections')}"></header>
+<main id="main">
+<div class="page-heading">
+    <h1>점검일지 상세</h1>
+    <div class="actions">
+        <a class="secondary" th:href="@{/inspections/{id}/edit(id=${inspection.id})}">점검일지 수정</a>
+        <form th:action="@{/inspections/{id}/delete(id=${inspection.id})}"
+              method="post" class="inline"
+              onsubmit="return confirm('점검일지를 삭제하시겠습니까? AI 분석 결과도 함께 삭제됩니다.');">
+            <button class="danger" type="submit">점검일지 삭제</button>
+        </form>
+    </div>
+</div>
+<section class="panel source">
+    <h2>점검 원문</h2>
+    <dl class="facts">
+        <div><dt>점검일지 ID</dt><dd th:text="${inspection.id}"></dd></div>
+        <div><dt>시설 이름</dt><dd th:text="${inspection.facility.name}"></dd></div>
+        <div><dt>시설 유형</dt><dd th:text="${inspection.facility.facilityType}"></dd></div>
+        <div><dt>시설 위치</dt><dd th:text="${inspection.facility.location}"></dd></div>
+        <div><dt>점검 일자</dt><dd th:text="${inspection.inspectionDate}"></dd></div>
+    </dl>
+    <p class="source-text" th:text="${inspection.content}"></p>
+    <form class="filters" th:action="@{/inspections/{id}/status(id=${inspection.id})}"
+          method="post">
 
-<h1>점검일지 상세</h1>
+        <label for="processing-status">점검 처리 상태</label>
+        <select id="processing-status" name="processingStatus">
+            <option th:each="status :
+                    ${T(com.kjune922.waterapi.inspection.ProcessingStatus).values()}"
+                    th:value="${status}"
+                    th:text="${status.description}"
+                    th:selected="${status == inspection.processingStatus}">
+            </option>
+        </select>
 
-<table class="detail-table">
-    <tbody>
-    <tr>
-        <th>점검일지 ID</th>
-        <td th:text="${inspection.id}"></td>
-    </tr>
-
-    <tr>
-        <th>시설 이름</th>
-        <td th:text="${inspection.facility.name}"></td>
-    </tr>
-
-    <tr>
-        <th>시설 유형</th>
-        <td th:text="${inspection.facility.facilityType}"></td>
-    </tr>
-
-    <tr>
-        <th>시설 위치</th>
-        <td th:text="${inspection.facility.location}"></td>
-    </tr>
-
-    <tr>
-        <th>점검 일자</th>
-        <td th:text="${inspection.inspectionDate}"></td>
-    </tr>
-
-    <tr>
-        <th>처리 상태</th>
-        <td th:text="${inspection.processingStatus.description}"></td>
-    </tr>
-
-    <tr>
-        <th>점검 내용</th>
-        <td th:text="${inspection.content}"></td>
-    </tr>
-    </tbody>
-</table>
-
-<br>
-
-<a th:href="@{/inspections/{id}/edit(id=${inspection.id})}">
-    점검일지 수정
-</a>
-
-<form th:action="@{/inspections/{id}/delete(id=${inspection.id})}"
-      method="post"
-      style="display: inline;"
-      onsubmit="return confirm('점검일지를 삭제하시겠습니까? AI 분석 결과도 함께 삭제됩니다.');">
-
-    <button type="submit">점검일지 삭제</button>
-</form>
-
-<hr>
-
-<h2>처리 상태 변경</h2>
-
-<form th:action="@{/inspections/{id}/status(id=${inspection.id})}"
-      method="post">
-
-    <select name="processingStatus">
-        <option th:each="status :
-                ${T(com.kjune922.waterapi.inspection.ProcessingStatus).values()}"
-                th:value="${status}"
-                th:text="${status.description}"
-                th:selected="${status == inspection.processingStatus}">
-        </option>
-    </select>
-
-    <button type="submit">상태 변경</button>
-</form>
-
-<hr>
-
-<h2>AI 분석 결과</h2>
-
-<div th:if="${analysis == null}">
+        <button type="submit">상태 변경</button>
+    </form>
+</section>
+<div class="section-heading">
+    <h2>AI 분석 결과</h2>
+    <span th:if="${analysis != null}" class="badge" th:classappend="${analysis.reviewStatus}"
+          th:text="${analysis.reviewStatus.description}"></span>
+</div>
+<div class="panel" th:if="${analysis == null}">
     <p>아직 AI 분석을 실행하지 않았습니다.</p>
-
     <form th:action="@{/inspections/{id}/analysis(id=${inspection.id})}"
           method="post">
         <button type="submit">AI 분석 실행</button>
     </form>
 </div>
-
-<div th:if="${analysis != null}">
-    <p>검토 상태 <strong th:text="${analysis.reviewStatus.description}"></strong></p>
-    <h3>AI 원본</h3>
-    <table class="detail-table">
-        <tbody>
-        <tr>
-            <th>요약</th>
-            <td th:text="${analysis.summary}"></td>
-        </tr>
-
-        <tr>
-            <th>이상 유형</th>
-            <td th:text="${analysis.abnormalityType}"></td>
-        </tr>
-
-        <tr>
-            <th>위험도</th>
-            <td th:text="${analysis.riskLevel.description}"></td>
-        </tr>
-
-        <tr>
-            <th>권장 조치</th>
-            <td th:text="${analysis.recommendedAction}"></td>
-        </tr>
-
-        <tr>
-            <th>분석 시각</th>
-            <td th:text="${#temporals.format(analysis.analyzedAt, 'yyyy-MM-dd HH:mm:ss')}"></td>
-        </tr>
-        </tbody>
-    </table>
-
-    <form th:if="${analysis.reviewStatus.name() == 'PENDING_REVIEW'}"
+<div th:if="${analysis != null}" class="two-cols comparison">
+    <section class="panel">
+        <h3>AI 원본</h3>
+        <dl class="reading">
+            <dt>요약</dt><dd><span th:text="${analysis.summary}"></span></dd>
+            <dt>이상 유형</dt><dd><span th:text="${analysis.abnormalityType}"></span></dd>
+            <dt>위험도</dt><dd><span class="badge" th:classappend="${analysis.riskLevel}" th:text="${analysis.riskLevel.description}"></span></dd>
+            <dt>권장 조치</dt><dd><span th:text="${analysis.recommendedAction}"></span></dd>
+            <dt>분석 시각</dt><dd th:text="${#temporals.format(analysis.analyzedAt, 'yyyy-MM-dd HH:mm:ss')}"></dd>
+        </dl>
+    </section>
+    <form class="panel review" th:if="${analysis.reviewStatus.name() == 'PENDING_REVIEW'}"
           th:action="@{/inspections/{id}/analysis/{aid}/confirm(id=${inspection.id},aid=${analysis.id})}"
           th:object="${confirmForm}" method="post">
         <h3>결과 검토</h3>
@@ -134,44 +77,41 @@
         <p>
             <label for="summary">요약</label>
             <textarea th:field="*{summary}" maxlength="500" required></textarea>
-            <span th:errors="*{summary}"></span>
+            <span class="field-error" th:errors="*{summary}"></span>
         </p>
         <p>
             <label for="abnormalityType">이상 유형</label>
             <input th:field="*{abnormalityType}" maxlength="100" required>
-            <span th:errors="*{abnormalityType}"></span>
+            <span class="field-error" th:errors="*{abnormalityType}"></span>
         </p>
         <p>
             <label for="riskLevel">위험도</label>
             <select th:field="*{riskLevel}" required>
+                <option value="">위험도 선택</option>
                 <option th:each="level : ${T(com.kjune922.waterapi.domain.RiskLevel).values()}"
                         th:value="${level}" th:text="${level.description}"></option>
             </select>
-            <span th:if="${#fields.hasErrors('riskLevel')}">위험도를 선택해 주세요.</span>
+            <span class="field-error" th:if="${#fields.hasErrors('riskLevel')}">위험도를 선택해 주세요.</span>
         </p>
         <p>
             <label for="recommendedAction">권장 조치</label>
             <textarea th:field="*{recommendedAction}" maxlength="1000" required></textarea>
-            <span th:errors="*{recommendedAction}"></span>
+            <span class="field-error" th:errors="*{recommendedAction}"></span>
         </p>
         <button type="submit">검토 결과 확정</button>
     </form>
-
-    <section th:if="${analysis.reviewStatus.name() == 'CONFIRMED'}">
+    <section class="panel" th:if="${analysis.reviewStatus.name() == 'CONFIRMED'}">
         <h3>사용자 확정본</h3>
-        <table class="detail-table">
-            <tr><th>요약</th><td th:text="${analysis.confirmedSummary}"></td></tr>
-            <tr><th>이상 유형</th><td th:text="${analysis.confirmedAbnormalityType}"></td></tr>
-            <tr><th>위험도</th><td th:text="${analysis.confirmedRiskLevel.description}"></td></tr>
-            <tr><th>권장 조치</th><td th:text="${analysis.confirmedRecommendedAction}"></td></tr>
-            <tr><th>확정 시각</th><td th:text="${#temporals.format(analysis.confirmedAt, 'yyyy-MM-dd HH:mm:ss')}"></td></tr>
-        </table>
+        <dl class="reading">
+            <dt>요약</dt><dd><span th:text="${analysis.confirmedSummary}"></span></dd>
+            <dt>이상 유형</dt><dd><span th:text="${analysis.confirmedAbnormalityType}"></span></dd>
+            <dt>위험도</dt><dd><span class="badge" th:classappend="${analysis.confirmedRiskLevel}" th:text="${analysis.confirmedRiskLevel.description}"></span></dd>
+            <dt>권장 조치</dt><dd><span th:text="${analysis.confirmedRecommendedAction}"></span></dd>
+            <dt>확정 시각</dt><dd th:text="${#temporals.format(analysis.confirmedAt, 'yyyy-MM-dd HH:mm:ss')}"></dd>
+        </dl>
     </section>
 </div>
-
-<br>
-
-<a th:href="@{/inspections}">목록으로</a>
-
+<a class="back" th:href="@{/inspections}">← 점검일지 목록</a>
+</main>
 </body>
 </html>

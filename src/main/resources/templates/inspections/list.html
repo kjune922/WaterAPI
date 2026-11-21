@@ -2,35 +2,17 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>점검일지 목록</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>점검일지 목록 · WaterAPI</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
-
-<a th:href="@{/}">대시보드</a>
-
-<h1>점검일지 목록</h1>
-
-<div class="page-links">
-    <a th:href="@{/inspections/new}">
-        점검일지 등록
-    </a>
-
-    <a th:href="@{/analyses}">
-        AI 분석 결과
-    </a>
-
-    <a th:href="@{/facilities}">
-        시설 목록
-    </a>
-</div>
-
-<hr>
-
-<h2>처리 상태 필터</h2>
-
-<form th:action="@{/inspections}" method="get">
-    <select name="processingStatus">
+<header th:replace="~{fragments/header :: header('inspections')}"></header>
+<main id="main">
+<div class="page-heading"><h1>점검일지 목록</h1><a class="primary" th:href="@{/inspections/new}">＋ 점검일지 등록</a></div>
+<form class="filters" th:action="@{/inspections}" method="get">
+    <label for="processing-filter">처리 상태 필터</label>
+    <select id="processing-filter" name="processingStatus">
         <option value="">전체</option>
 
         <option th:each="status : ${processingStatuses}"
@@ -42,10 +24,8 @@
 
     <button type="submit">조회</button>
 </form>
-
-<br>
-
-<table border="1">
+<div class="table-scroll" tabindex="0" role="region" aria-label="점검일지 목록 표">
+<table>
     <thead>
     <tr>
         <th>ID</th>
@@ -71,8 +51,7 @@
 
         <td th:text="${inspection.inspectionDate}"></td>
 
-        <td th:text="${inspection.processingStatus.description}">
-        </td>
+        <td><span class="badge" th:classappend="${inspection.processingStatus}" th:text="${inspection.processingStatus.description}"></span></td>
 
         <td th:text="${inspection.content}"></td>
 
@@ -84,10 +63,9 @@
     </tr>
     </tbody>
 </table>
+</div>
 
-<br>
-
-<nav th:if="${inspections.totalPages > 0}">
+<nav class="pager" aria-label="페이지" th:if="${inspections.totalPages > 0}">
     <a th:if="${inspections.hasPrevious()}"
        th:href="@{/inspections(
             page=${inspections.number - 1},
@@ -130,6 +108,6 @@
     /
     <span th:text="${inspections.totalPages}"></span>
 </p>
-
+</main>
 </body>
 </html>

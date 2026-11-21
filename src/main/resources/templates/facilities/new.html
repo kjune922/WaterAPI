@@ -2,20 +2,23 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>시설 등록</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>상하수도 시설 등록 · WaterAPI</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
+<header th:replace="~{fragments/header :: header('facilities')}"></header>
+<main id="main">
 <h1>상하수도 시설 등록</h1>
 
-<form th:action="@{/facilities}"
+<form class="panel edit-form" th:action="@{/facilities}"
       th:object="${facilityForm}"
       method="post">
 
     <div>
         <label for="name">시설 이름</label>
         <input id="name" type="text" th:field="*{name}">
-        <p th:errors="*{name}"></p>
+        <p class="field-error" th:errors="*{name}"></p>
     </div>
 
     <div>
@@ -27,17 +30,18 @@
                     th:text="${type}">
             </option>
         </select>
-        <p th:errors="*{facilityType}"></p>
+        <p class="field-error" th:errors="*{facilityType}"></p>
     </div>
 
     <div>
         <label for="location">시설 위치</label>
         <input id="location" type="text" th:field="*{location}">
-        <p th:errors="*{location}"></p>
+        <p class="field-error" th:errors="*{location}"></p>
     </div>
 
     <button type="submit">등록</button>
-    <a th:href="@{/facilities}">목록으로</a>
+    <a th:href="@{/facilities}">등록 취소</a>
 </form>
+</main>
 </body>
 </html>

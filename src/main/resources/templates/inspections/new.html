@@ -2,13 +2,16 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>점검일지 등록</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>점검일지 등록 · WaterAPI</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
+<header th:replace="~{fragments/header :: header('inspections')}"></header>
+<main id="main">
 <h1>점검일지 등록</h1>
 
-<form th:action="@{/inspections}"
+<form class="panel edit-form" th:action="@{/inspections}"
       th:object="${inspectionForm}"
       method="post">
 
@@ -24,7 +27,7 @@
             </option>
         </select>
 
-        <p th:errors="*{facilityId}"></p>
+        <p class="field-error" th:errors="*{facilityId}"></p>
     </div>
 
     <div>
@@ -33,7 +36,7 @@
                type="date"
                th:field="*{inspectionDate}">
 
-        <p th:errors="*{inspectionDate}"></p>
+        <p class="field-error" th:errors="*{inspectionDate}"></p>
     </div>
 
     <div>
@@ -45,11 +48,12 @@
                   cols="50">
         </textarea>
 
-        <p th:errors="*{content}"></p>
+        <p class="field-error" th:errors="*{content}"></p>
     </div>
 
     <button type="submit">등록</button>
-    <a th:href="@{/inspections}">목록으로</a>
+    <a th:href="@{/inspections}">등록 취소</a>
 </form>
+</main>
 </body>
 </html>

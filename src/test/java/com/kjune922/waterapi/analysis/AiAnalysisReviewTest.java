@@ -9,6 +9,9 @@ import com.kjune922.waterapi.inspection.InspectionReportService;
 import jakarta.validation.ConstraintViolationException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.NullAndEmptySource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -22,6 +25,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.matchesPattern;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -93,6 +97,36 @@ class AiAnalysisReviewTest {
                 .andExpect(model().attributeHasFieldErrors("confirmForm", "summary", "abnormalityType",
                         "riskLevel", "recommendedAction"))
                 .andExpect(view().name("inspections/detail"));
+        assertThat(analyses.findAnalysis(inspection.getId()).orElseThrow().getReviewStatus())
+                .isEqualTo(AnalysisReviewStatus.PENDING_REVIEW);
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = "INVALID")
+    void 위험도_오류에서_다른_필드만_수정해도_확정되지_않는다(String invalidRisk) throws Exception {
+        mvc.perform(get("/inspections/{id}", inspection.getId()))
+                .andExpect(content().string(matchesPattern(
+                        "(?s).*<option(?=[^>]*value=\"CAUTION\")(?=[^>]*selected)[^>]*>.*")));
+
+        MockHttpServletRequestBuilder invalid = confirmRequest().param("summary", "입력 유지")
+                .param("abnormalityType", "진동").param("recommendedAction", "");
+        if (invalidRisk != null) {
+            invalid.param("riskLevel", invalidRisk);
+        }
+        mvc.perform(invalid)
+                .andExpect(status().isBadRequest())
+                .andExpect(model().attributeHasFieldErrors("confirmForm", "riskLevel", "recommendedAction"))
+                .andExpect(content().string(containsString("입력 유지")))
+                .andExpect(content().string(matchesPattern(
+                        "(?s).*<select[^>]*id=\"riskLevel\"[^>]*>\\s*<option[^>]*value=\"\"[^>]*>위험도 선택</option>.*")))
+                .andExpect(content().string(not(matchesPattern(
+                        "(?s).*<option(?=[^>]*value=\"(?:NORMAL|CAUTION|WARNING)\")(?=[^>]*selected)[^>]*>.*"))));
+
+        mvc.perform(confirmRequest().param("summary", "입력 유지").param("riskLevel", "")
+                        .param("abnormalityType", "진동").param("recommendedAction", "재점검"))
+                .andExpect(status().isBadRequest())
+                .andExpect(model().attributeHasFieldErrors("confirmForm", "riskLevel"));
         assertThat(analyses.findAnalysis(inspection.getId()).orElseThrow().getReviewStatus())
                 .isEqualTo(AnalysisReviewStatus.PENDING_REVIEW);
     }
