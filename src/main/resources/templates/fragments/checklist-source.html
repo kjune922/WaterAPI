@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org"><body>
+<p class="form-source" th:fragment="source(type)">
+    <span th:switch="${type?.name()}">
+        <span th:case="'PUMP'">펌프 점검표(8쪽)의 일부 항목을 참고했습니다.</span>
+        <span th:case="'PIPE'">배관설비 점검표(23쪽)의 일부 항목을 참고했습니다.</span>
+        <span th:case="'VALVE'">밸브는 관련 설비 항목을 참고해 자체 구성했습니다.</span>
+        <span th:case="'WATER_QUALITY_SENSOR'">수질 센서는 자체 구성한 간단 양식입니다.</span>
+    </span>
+    실습용으로 법정 점검을 대체하지 않습니다.
+    <a href="https://www.law.go.kr/LSW/flDownload.do?flSeq=156037639">참고 자료 · 기계설비 유지관리기준 별지 제2호서식</a>
+</p>
+</body></html>

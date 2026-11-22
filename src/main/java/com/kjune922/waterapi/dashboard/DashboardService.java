@@ -1,6 +1,7 @@
 package com.kjune922.waterapi.dashboard;
 
 import com.kjune922.waterapi.analysis.AiAnalysisRepository;
+import com.kjune922.waterapi.analysis.AnalysisReviewStatus;
 import com.kjune922.waterapi.domain.RiskLevel;
 import com.kjune922.waterapi.facility.FacilityRepository;
 import com.kjune922.waterapi.inspection.InspectionReportRepository;
@@ -34,14 +35,15 @@ public class DashboardService {
                 ),
 
                 aiAnalysisRepository.count(),
+                aiAnalysisRepository.countByReviewStatus(AnalysisReviewStatus.PENDING_REVIEW),
 
-                aiAnalysisRepository.countByRiskLevel(
+                aiAnalysisRepository.countByReviewStatusAndConfirmedRiskLevel(AnalysisReviewStatus.CONFIRMED,
                         RiskLevel.NORMAL
                 ),
-                aiAnalysisRepository.countByRiskLevel(
+                aiAnalysisRepository.countByReviewStatusAndConfirmedRiskLevel(AnalysisReviewStatus.CONFIRMED,
                         RiskLevel.CAUTION
                 ),
-                aiAnalysisRepository.countByRiskLevel(
+                aiAnalysisRepository.countByReviewStatusAndConfirmedRiskLevel(AnalysisReviewStatus.CONFIRMED,
                         RiskLevel.WARNING
                 )
         );

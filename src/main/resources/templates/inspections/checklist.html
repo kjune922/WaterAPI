@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>점검표 작성 · WaterAPI</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}">
+</head>
+<body>
+<header th:replace="~{fragments/header :: header('inspections')}"></header>
+<main id="main">
+<h1 th:text="${inspectionId == null ? '점검표 작성' : '점검표 수정'}"></h1>
+<form class="panel edit-form" method="post" th:object="${checklist}"
+      th:action="${inspectionId == null} ? @{/inspections/new/{id}(id=${facility.id})} : @{/inspections/{id}/checklist(id=${inspectionId})}">
+    <h2 th:text="${facility.name}"></h2>
+    <p><span th:text="*{recordedType}"></span> 점검표 · 버전 <span th:text="*{formVersion}"></span></p>
+    <a th:if="${inspectionId == null}" th:href="@{/inspections/new}"
+       onclick="return confirm('작성 중인 값을 비우고 시설을 다시 선택할까요?')">시설 다시 선택</a>
+    <p th:if="${inspectionId != null}">수정하면 기존 분석과 확정본이 함께 삭제됩니다.</p>
+    <input type="hidden" th:field="*{facilityId}">
+    <input type="hidden" th:field="*{recordedType}">
+    <input type="hidden" th:field="*{formVersion}">
+    <ul th:if="${#fields.hasAnyErrors()}" class="field-error" role="alert">
+        <li th:each="error : ${#fields.allErrors()}" th:text="${error}"></li>
+    </ul>
+    <div><label for="inspectionDate">점검 일자</label>
+        <input type="date" th:field="*{inspectionDate}" required></div>
+    <div><label for="inspectorName">점검자 이름 (직접 입력)</label>
+        <input th:field="*{inspectorName}" maxlength="50" required></div>
+    <fieldset th:each="item : ${items}" class="observation">
+        <legend th:text="${item.label}"></legend>
+        <label>관찰 결과
+            <select th:field="*{results[__${item.code}__]}" required>
+                <option value="">결과 선택</option>
+                <option th:each="choice : ${resultChoices}" th:value="${choice}" th:text="${choice.label}"></option>
+            </select>
+        </label>
+        <span class="field-error" th:errors="*{results[__${item.code}__]}"></span>
+        <label>사유 (조치 필요 시 필수)
+            <input th:field="*{reasons[__${item.code}__]}" maxlength="500">
+        </label>
+        <span class="field-error" th:errors="*{reasons[__${item.code}__]}"></span>
+    </fieldset>
+    <div><label for="notes">특이사항</label>
+        <textarea th:field="*{notes}" maxlength="2000"></textarea></div>
+    <div><label for="actionTaken">실시한 조치</label>
+        <textarea th:field="*{actionTaken}" maxlength="2000"></textarea></div>
+    <p th:replace="~{fragments/checklist-source :: source(${checklist.recordedType})}"></p>
+    <button type="submit">점검표 저장</button>
+</form>
+<script>
+    for (const row of document.querySelectorAll('.observation')) {
+        const result = row.querySelector('select');
+        const reason = row.querySelector('input');
+        function requireReason() { reason.required = result.value === 'ACTION_NEEDED'; }
+        result.addEventListener('change', requireReason);
+        requireReason();
+    }
+</script>
+</main>
+</body>
+</html>

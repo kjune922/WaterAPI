@@ -30,7 +30,7 @@ class AiAnalysisControllerTest {
     @Test
     @DisplayName("AI분석 결과 전체 페이지 조회")
     void readResultAll() throws Exception{
-        given(aiAnalysisService.findAnalysisPage(isNull(), any(Pageable.class)))
+        given(aiAnalysisService.findAnalysisPage(isNull(), isNull(), any(Pageable.class)))
                 .willReturn(Page.empty());
 
         mockMvc.perform(get("/analyses"))
@@ -39,13 +39,13 @@ class AiAnalysisControllerTest {
                 .andExpect(model().attributeExists("analyses"))
                 .andExpect(model().attributeExists("riskLevels"));
 
-        verify(aiAnalysisService).findAnalysisPage(isNull(), any(Pageable.class));
+        verify(aiAnalysisService).findAnalysisPage(isNull(), isNull(), any(Pageable.class));
     }
 
     @Test
     @DisplayName("위험도로 AI분석 결과 페이지 조회")
     void readAllResultByRiskLevel() throws Exception{
-        given(aiAnalysisService.findAnalysisPage(eq(RiskLevel.WARNING), any(Pageable.class)))
+        given(aiAnalysisService.findAnalysisPage(eq(RiskLevel.WARNING), isNull(), any(Pageable.class)))
                 .willReturn(Page.empty());
 
         mockMvc.perform(get("/analyses")
@@ -56,7 +56,7 @@ class AiAnalysisControllerTest {
                 .andExpect(view().name("analyses/list"))
                 .andExpect(model().attribute("selectedRiskLevel", RiskLevel.WARNING));
 
-        verify(aiAnalysisService).findAnalysisPage(eq(RiskLevel.WARNING), any(Pageable.class));
+        verify(aiAnalysisService).findAnalysisPage(eq(RiskLevel.WARNING), isNull(), any(Pageable.class));
     }
 
 }

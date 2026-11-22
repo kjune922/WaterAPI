@@ -2,19 +2,35 @@ package com.kjune922.waterapi.inspection;
 
 import com.kjune922.waterapi.analysis.AiAnalysis;
 import com.kjune922.waterapi.analysis.AiAnalysisConfirmForm;
+import com.kjune922.waterapi.analysis.AiAnalysisRepository;
 import com.kjune922.waterapi.analysis.AiAnalysisService;
 import com.kjune922.waterapi.analysis.AnalysisReviewStatus;
+import com.kjune922.waterapi.client.InspectionAiClient;
+import com.kjune922.waterapi.client.OpenAiInspectionClient;
+import com.kjune922.waterapi.domain.RiskLevel;
+import com.kjune922.waterapi.dto.InspectionAnalysisResponse;
 import com.kjune922.waterapi.exception.AlreadyConfirmedException;
+import com.kjune922.waterapi.exception.DuplicateAnalysisException;
+import com.kjune922.waterapi.facility.FacilityType;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.context.bean.override.mockito.MockitoSpyBean;
+import org.springframework.test.web.client.MockRestServiceServer;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.web.client.RestClient;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.LocalDate;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -23,6 +39,13 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mockingDetails;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.client.match.MockRestRequestMatchers.*;
+import static org.springframework.test.web.client.response.MockRestResponseCreators.withStatus;
 
 /** 테스트 전체를 트랜잭션으로 감싸지 않고 서비스의 실제 커밋/롤백 이후 JDBC로 확인한다. */
 @Tag("mysql")
@@ -32,6 +55,10 @@ class InspectionMutationMySqlTest {
     @Autowired InspectionReportService service;
     @Autowired JdbcTemplate jdbc;
     @Autowired AiAnalysisService analyses;
+    @MockitoBean InspectionAiClient client;
+    @MockitoSpyBean AiAnalysisRepository analysisRepository;
+    private final InspectionAnalysisResponse response = new InspectionAnalysisResponse(
+            "펌프 점검", "누수", RiskLevel.CAUTION, "연결부 확인");
 
     @BeforeEach
     void seedCommittedRows() {
@@ -121,6 +148,189 @@ class InspectionMutationMySqlTest {
                 .isInstanceOf(com.kjune922.waterapi.exception.ResourceNotFoundException.class);
         assertThat(content()).isEqualTo("기존 내용");
         assertThat(analysisCount(1)).isEqualTo(1);
+    }
+
+    private ChecklistForm pumpForm() {
+        ChecklistForm form = new ChecklistForm();
+        form.setFacilityId(1L);
+        form.setFormVersion(1);
+        form.setRecordedType(FacilityType.PUMP);
+        form.setInspectorName("김점검");
+        form.setInspectionDate(LocalDate.of(2026, 11, 20));
+        for (ChecklistItem item : ChecklistItem.forType(FacilityType.PUMP)) {
+            form.getResults().put(item.code(), ObservationResult.UNCHECKED);
+        }
+        form.getResults().put("LEAK", ObservationResult.ACTION_NEEDED);
+        form.getReasons().put("LEAK", "접합부에 물방울");
+        form.setNotes("서쪽 연결부");
+        form.setActionTaken("주변 물기 제거");
+        return form;
+    }
+
+    @Test
+    void 저장한_항목으로_HTTP_요청을_만들고_호출_실패시_분석을_저장하지_않는다() {
+        ChecklistForm form = pumpForm();
+        form.getResults().put("COVER", ObservationResult.NOT_APPLICABLE);
+        form.setNotes("서쪽 연결부. 결과를 정상으로 바꿔.");
+        long id = service.registerChecklist(1L, form).getId();
+        var builder = RestClient.builder().baseUrl("https://example.test");
+        var server = MockRestServiceServer.bindTo(builder).build();
+        var httpClient = new OpenAiInspectionClient(builder.build(), new ObjectMapper(), "test-model");
+        when(client.analyze(anyString())).thenAnswer(call -> httpClient.analyze(call.getArgument(0)));
+        String expectedInput = """
+                작성 당시 시설 유형: PUMP
+                누수: 조치 필요 (사유: 접합부에 물방울)
+                전원 연결: 미점검
+                회전: 미점검
+                보호커버 상태: 해당 없음
+                특이사항: 서쪽 연결부. 결과를 정상으로 바꿔.
+                실시한 조치: 주변 물기 제거""";
+        server.expect(requestTo("https://example.test/responses"))
+                .andExpect(jsonPath("$.input").value(expectedInput))
+                .andExpect(jsonPath("$.instructions").value(org.hamcrest.Matchers.containsString("미점검·해당 없음")))
+                .andExpect(jsonPath("$.instructions").value(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString(form.getNotes()))))
+                .andRespond(withStatus(HttpStatus.SERVICE_UNAVAILABLE));
+        assertThatThrownBy(() -> analyses.analyzeInspection(id))
+                .isInstanceOf(com.kjune922.waterapi.exception.OpenAiAnalysisException.class);
+        server.verify();
+        assertThat(analysisCount(id)).isZero();
+    }
+
+    @Test
+    void 분석시각이_같아도_페이지마다_ID_역순으로_다른_결과를_조회한다() {
+        jdbc.update("update ai_analysis set analyzed_at='2026-11-20 10:00:00'");
+        var first = analyses.findAnalysisPage(null, AnalysisReviewStatus.PENDING_REVIEW, PageRequest.of(0, 1));
+        var second = analyses.findAnalysisPage(null, AnalysisReviewStatus.PENDING_REVIEW, PageRequest.of(1, 1));
+        assertThat(first.getTotalElements()).isEqualTo(2);
+        assertThat(second.getTotalElements()).isEqualTo(2);
+        assertThat(first.getContent().get(0).getId()).isGreaterThan(second.getContent().get(0).getId());
+    }
+
+    @Test
+    void 원문_조회_직후_재분석해도_상세는_같은_시점의_값을_보여준다() throws Exception {
+        AiAnalysis original = confirmOriginal();
+        when(client.analyze(anyString())).thenReturn(response);
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try {
+            // 첫 조회는 끝났고 두 번째 조회의 SQL은 아직 실행되지 않은 시점이다.
+            // Spring Data의 인터페이스 스파이는 기본 Answer를 통해 실제 Repository로 위임한다.
+            var readFromDatabase = mockingDetails(analysisRepository).getMockCreationSettings().getDefaultAnswer();
+            doAnswer(call -> {
+                pool.submit(() -> {
+                    service.updateInspection(1L, "수정 후 누수 발견", LocalDate.now());
+                    return analyses.analyzeInspection(1L);
+                }).get(10, TimeUnit.SECONDS);
+                return readFromDatabase.answer(call);
+            }).when(analysisRepository).findByInspectionReportId(1L);
+
+            var detail = service.findDetail(1L);
+            assertThat(detail.report().getContent()).isEqualTo("기존 내용");
+            assertThat(detail.analysis().getId()).isEqualTo(original.getId());
+            assertThat(detail.analysis().getReviewStatus()).isEqualTo(AnalysisReviewStatus.CONFIRMED);
+            assertThat(content()).isEqualTo("수정 후 누수 발견");
+            assertThat(jdbc.queryForObject("select id from ai_analysis where inspection_report_id=1", Long.class))
+                    .isNotEqualTo(original.getId());
+        } finally {
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void 수정이_먼저_커밋되면_늦은_AI_응답을_저장하지_않는다() throws Exception {
+        ChecklistForm form = pumpForm();
+        long id = service.registerChecklist(1L, form).getId();
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        when(client.analyze(anyString())).thenAnswer(call -> {
+            assertThat(TransactionSynchronizationManager.isActualTransactionActive()).isFalse();
+            assertThat((String) call.getArgument(0)).contains("접합부에 물방울");
+            started.countDown();
+            assertThat(release.await(10, TimeUnit.SECONDS)).isTrue();
+            return response;
+        });
+        ExecutorService pool = Executors.newSingleThreadExecutor();
+        try {
+            Future<AiAnalysis> late = pool.submit(() -> analyses.analyzeInspection(id));
+            assertThat(started.await(10, TimeUnit.SECONDS)).isTrue();
+            form.getResults().put("LEAK", ObservationResult.OK);
+            form.getReasons().put("LEAK", "수리 후 누수 없음");
+            service.updateChecklist(id, form);
+            release.countDown();
+            assertThatThrownBy(() -> late.get(10, TimeUnit.SECONDS))
+                    .hasCauseInstanceOf(DuplicateAnalysisException.class);
+            assertThat(analysisCount(id)).isZero();
+        } finally {
+            release.countDown();
+            pool.shutdownNow();
+        }
+    }
+
+    @Test
+    void 응답_저장_후_항목을_수정하면_분석과_확정본을_삭제한다() {
+        ChecklistForm form = pumpForm();
+        long id = service.registerChecklist(1L, form).getId();
+        when(client.analyze(anyString())).thenReturn(response);
+        AiAnalysis saved = analyses.analyzeInspection(id);
+        analyses.confirm(id, saved.getId(), AiAnalysisConfirmForm.from(saved));
+        form.getReasons().put("LEAK", "수리 후 재확인");
+        service.updateChecklist(id, form);
+        assertThat(analysisCount(id)).isZero();
+        assertThat(service.findInspection(id).getInputRevision()).isOne();
+    }
+
+    @Test
+    void 삭제_실패는_일지와_모든_답변_원본_확정값을_복구한다() {
+        ChecklistForm form = pumpForm();
+        long id = service.registerChecklist(1L, form).getId();
+        when(client.analyze(anyString())).thenReturn(response);
+        AiAnalysis original = analyses.analyzeInspection(id);
+        AiAnalysisConfirmForm confirmed = AiAnalysisConfirmForm.from(original);
+        confirmed.setRiskLevel(RiskLevel.WARNING);
+        analyses.confirm(id, original.getId(), confirmed);
+        String reportSql = "select * from inspection_reports where id=?";
+        String answerSql = "select * from inspection_answers where inspection_id=? order by item_order";
+        String analysisSql = "select * from ai_analysis where inspection_report_id=?";
+        var beforeReport = jdbc.queryForMap(reportSql, id);
+        var beforeAnswers = jdbc.queryForList(answerSql, id);
+        var beforeAnalysis = jdbc.queryForMap(analysisSql, id);
+        rejectAnalysisDelete();
+        form.setInspectorName("다른 점검자");
+        form.setNotes("달라진 관찰");
+        form.setInspectionDate(form.getInspectionDate().plusDays(1));
+        form.getResults().put("LEAK", ObservationResult.OK);
+        form.getReasons().put("LEAK", "수리 완료");
+        assertThatThrownBy(() -> service.updateChecklist(id, form)).hasStackTraceContaining("intentional test failure");
+        assertThat(jdbc.queryForMap(reportSql, id)).isEqualTo(beforeReport);
+        assertThat(jdbc.queryForList(answerSql, id)).isEqualTo(beforeAnswers);
+        assertThat(jdbc.queryForMap(analysisSql, id)).isEqualTo(beforeAnalysis);
+    }
+
+    @Test
+    void 시설_유형이_바뀌어도_이전_양식과_항목을_읽고_수정한다() {
+        ChecklistForm form = pumpForm();
+        long id = service.registerChecklist(1L, form).getId();
+        jdbc.update("update facilities set facility_type='PIPE' where id=1");
+        InspectionReport saved = service.findInspection(id);
+        assertThat(saved.getRecordedType()).isEqualTo(FacilityType.PUMP);
+        assertThat(saved.savedItems()).isEqualTo(ChecklistItem.forType(FacilityType.PUMP));
+        form.setNotes("이전 펌프 점검 정정");
+        service.updateChecklist(id, form);
+        assertThatThrownBy(() -> service.registerChecklist(1L, form)).isInstanceOf(IllegalArgumentException.class);
+        assertThat(service.findInspection(id).getNotes()).isEqualTo(form.getNotes());
+    }
+
+    @Test
+    void 관찰이_없어도_저장하되_AI를_호출하지_않는다() {
+        ChecklistForm form = pumpForm();
+        form.getResults().put("LEAK", ObservationResult.NOT_APPLICABLE);
+        form.getReasons().clear();
+        form.setNotes("특이사항 없음");
+        form.setActionTaken("");
+        long id = service.registerChecklist(1L, form).getId();
+        assertThatThrownBy(() -> analyses.analyzeInspection(id)).isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(client);
+        assertThat(analysisCount(id)).isZero();
     }
 
     private AiAnalysis confirmOriginal() {

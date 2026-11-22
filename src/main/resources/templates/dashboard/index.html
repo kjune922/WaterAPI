@@ -26,6 +26,10 @@
         <div class="metric-label"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="m12 3 2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5Z"/></svg>AI 분석 결과</div>
         <strong th:text="${summary.analysisCount}"></strong><span class="metric-arrow" aria-hidden="true">↗</span>
     </a>
+    <a class="metric" th:href="@{/analyses(reviewStatus=PENDING_REVIEW)}">
+        <div class="metric-label">사용자 검토 대기</div>
+        <strong th:text="${summary.reviewPendingCount}"></strong><span class="metric-arrow" aria-hidden="true">↗</span>
+    </a>
 </div>
 <div class="two-cols">
     <section class="panel overview">
@@ -46,17 +50,18 @@
         </ul>
     </section>
     <section class="panel overview">
-        <h2>AI 분석 위험도</h2>
+        <h2>확정 결과 현황</h2>
+        <span th:replace="~{fragments/header :: stubMode}"></span>
         <ul class="counts">
-            <li><a th:href="@{/analyses(riskLevel=NORMAL)}">
+            <li><a th:href="@{/analyses(reviewStatus=CONFIRMED,riskLevel=NORMAL)}">
                 <span class="badge NORMAL">정상</span>
                 <strong th:text="${summary.normalCount}"></strong><span aria-hidden="true">›</span>
             </a></li>
-            <li><a th:href="@{/analyses(riskLevel=CAUTION)}">
+            <li><a th:href="@{/analyses(reviewStatus=CONFIRMED,riskLevel=CAUTION)}">
                 <span class="badge CAUTION">주의</span>
                 <strong th:text="${summary.cautionCount}"></strong><span aria-hidden="true">›</span>
             </a></li>
-            <li><a th:href="@{/analyses(riskLevel=WARNING)}">
+            <li><a th:href="@{/analyses(reviewStatus=CONFIRMED,riskLevel=WARNING)}">
                 <span class="badge WARNING">위험</span>
                 <strong th:text="${summary.warningCount}"></strong><span aria-hidden="true">›</span>
             </a></li>

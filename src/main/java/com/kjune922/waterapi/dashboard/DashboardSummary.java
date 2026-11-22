@@ -7,6 +7,7 @@ public record DashboardSummary(
         long inProgressCount,
         long completedCount,
         long analysisCount,
+        long reviewPendingCount,
         long normalCount,
         long cautionCount,
         long warningCount
