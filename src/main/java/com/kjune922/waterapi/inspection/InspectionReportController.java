@@ -2,6 +2,11 @@ package com.kjune922.waterapi.inspection;
 
 import com.kjune922.waterapi.analysis.AiAnalysis;
 import com.kjune922.waterapi.analysis.AiAnalysisService;
+import com.kjune922.waterapi.analysis.AiAnalysisConfirmForm;
+import com.kjune922.waterapi.analysis.AnalysisReviewStatus;
+import com.kjune922.waterapi.exception.AlreadyConfirmedException;
+import com.kjune922.waterapi.exception.ResourceNotFoundException;
+import jakarta.servlet.http.HttpServletResponse;
 import com.kjune922.waterapi.facility.FacilityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -95,6 +100,9 @@ public class InspectionReportController {
                 aiAnalysisService.findAnalysis(id)
                         .orElse(null);
 
+        if (analysis != null && analysis.getReviewStatus() == AnalysisReviewStatus.PENDING_REVIEW) {
+            model.addAttribute("confirmForm", AiAnalysisConfirmForm.from(analysis));
+        }
         model.addAttribute("analysis", analysis);
         model.addAttribute("inspection", inspection);
 
@@ -153,6 +161,26 @@ public class InspectionReportController {
     ) {
         aiAnalysisService.analyzeInspection(id);
 
+        return "redirect:/inspections/" + id;
+    }
+
+    @PostMapping("/{id}/analysis/{analysisId}/confirm")
+    public String confirm(@PathVariable Long id, @PathVariable Long analysisId,
+                          @Validated @ModelAttribute("confirmForm") AiAnalysisConfirmForm form,
+                          BindingResult errors, Model model, HttpServletResponse response) {
+        if (errors.hasErrors()) {
+            AiAnalysis analysis = aiAnalysisService.findAnalysis(id)
+                    .filter(result -> analysisId.equals(result.getId()))
+                    .orElseThrow(() -> new ResourceNotFoundException("해당 점검일지의 분석을 찾을 수 없습니다."));
+            if (analysis.getReviewStatus() == AnalysisReviewStatus.CONFIRMED) {
+                throw new AlreadyConfirmedException();
+            }
+            model.addAttribute("analysis", analysis);
+            model.addAttribute("inspection", inspectionReportService.findInspection(id));
+            response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+            return "inspections/detail";
+        }
+        aiAnalysisService.confirm(id, analysisId, form);
         return "redirect:/inspections/" + id;
     }
 

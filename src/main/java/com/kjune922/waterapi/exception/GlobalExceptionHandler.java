@@ -28,14 +28,14 @@ public class GlobalExceptionHandler {
     }
 
     @ResponseStatus(HttpStatus.CONFLICT)
-    @ExceptionHandler(DuplicateAnalysisException.class)
-    public String handleDuplicateAnalysis(
-            DuplicateAnalysisException exception,
+    @ExceptionHandler({DuplicateAnalysisException.class, AlreadyConfirmedException.class})
+    public String handleAnalysisConflict(
+            RuntimeException exception,
             HttpServletRequest request,
             Model model
     ) {
         log.warn(
-                "중복 AI 분석 요청: path={}, message={}",
+                "AI 분석 상태 충돌: path={}, message={}",
                 request.getRequestURI(),
                 exception.getMessage()
         );

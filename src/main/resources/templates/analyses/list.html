@@ -2,30 +2,29 @@
 <html lang="ko" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
-    <title>AI 분석 결과 목록</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI 분석 결과 목록 · AI 분석 위험도 · WaterAPI</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
-
-<h1>AI 분석 결과 목록</h1>
-
-<a th:href="@{/}">대시보드</a>
-
-<div class="page-links">
-    <a th:href="@{/analyses}">
+<header th:replace="~{fragments/header :: header('analyses')}"></header>
+<main id="main">
+<div class="page-heading"><h1>AI 분석 결과 목록 · AI 분석 위험도</h1></div>
+<div class="filters">
+    <strong>AI 분석 위험도 필터</strong>
+    <a th:classappend="${selectedRiskLevel == null ? 'active' : ''}" th:href="@{/analyses}">
         전체
     </a>
 
     <span th:each="riskLevel : ${riskLevels}">
-        <a th:href="@{/analyses(riskLevel=${riskLevel})}"
+        <a th:classappend="${riskLevel == selectedRiskLevel ? 'active' : ''}" th:href="@{/analyses(riskLevel=${riskLevel})}"
            th:text="${riskLevel.description}">
         </a>
     </span>
 </div>
 
-<br>
-
-<table border="1">
+<div class="table-scroll" tabindex="0" role="region" aria-label="AI 분석 결과 목록 · AI 분석 위험도 표">
+<table>
     <thead>
     <tr>
         <th>분석 ID</th>
@@ -33,7 +32,8 @@
         <th>점검 내용</th>
         <th>요약</th>
         <th>이상 유형</th>
-        <th>위험도</th>
+        <th>AI 분석 위험도</th>
+        <th>검토 상태</th>
         <th>권장 조치</th>
         <th>분석 시각</th>
     </tr>
@@ -56,7 +56,8 @@
 
         <td th:text="${analysis.abnormalityType}"></td>
 
-        <td th:text="${analysis.riskLevel.description}"></td>
+        <td><span class="badge" th:classappend="${analysis.riskLevel}" th:text="${analysis.riskLevel.description}"></span></td>
+        <td><span class="badge" th:classappend="${analysis.reviewStatus}" th:text="${analysis.reviewStatus.description}"></span></td>
 
         <td th:text="${analysis.recommendedAction}"></td>
 
@@ -64,14 +65,15 @@
     </tr>
 
     <tr th:if="${analyses.empty}">
-        <td colspan="8">
+        <td colspan="9">
             조회된 AI 분석 결과가 없습니다.
         </td>
     </tr>
     </tbody>
 </table>
+</div>
 
-<div th:if="${analyses.totalPages > 0}">
+<nav class="pager" aria-label="페이지" th:if="${analyses.totalPages > 0}">
     <a th:if="${analyses.hasPrevious()}"
        th:href="@{/analyses(
             page=${analyses.number - 1},
@@ -106,13 +108,11 @@
        )}">
         다음
     </a>
-</div>
-
-<br>
+</nav>
 
 <a th:href="@{/inspections}">
     점검일지 목록으로
 </a>
-
+</main>
 </body>
 </html>
