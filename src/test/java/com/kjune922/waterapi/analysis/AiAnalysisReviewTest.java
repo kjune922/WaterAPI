@@ -1,5 +1,6 @@
 package com.kjune922.waterapi.analysis;
 
+import com.kjune922.waterapi.dashboard.DashboardService;
 import com.kjune922.waterapi.domain.RiskLevel;
 import com.kjune922.waterapi.facility.Facility;
 import com.kjune922.waterapi.facility.FacilityRepository;
@@ -7,6 +8,7 @@ import com.kjune922.waterapi.facility.FacilityType;
 import com.kjune922.waterapi.inspection.InspectionReport;
 import com.kjune922.waterapi.inspection.InspectionReportService;
 import jakarta.validation.ConstraintViolationException;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -15,29 +17,38 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
-import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.hamcrest.Matchers.containsString;
-import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.matchesPattern;
+import static org.hamcrest.Matchers.not;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
 @AutoConfigureMockMvc
-@Transactional
 class AiAnalysisReviewTest {
     @Autowired MockMvc mvc;
     @Autowired FacilityRepository facilities;
     @Autowired InspectionReportService inspections;
     @Autowired AiAnalysisService analyses;
+
+    @Autowired TransactionTemplate transactions;
+    @Autowired DashboardService dashboard;
+
+    @AfterEach
+    void cleanUp() {
+        inspections.deleteInspection(inspection.getId());
+        facilities.deleteById(inspection.getFacility().getId());
+    }
 
     private InspectionReport inspection;
     private AiAnalysis original;
@@ -56,11 +67,19 @@ class AiAnalysisReviewTest {
                 .andExpect(content().string(containsString(original.getSummary())))
                 .andExpect(content().string(containsString("검토 결과 확정")));
 
-        mvc.perform(confirmRequest().param("summary", "현장 재확인").param("riskLevel", "WARNING")
-                        .param("abnormalityType", "누수").param("recommendedAction", "밸브 점검"))
-                .andExpect(redirectedUrl(detail));
-
-        AiAnalysis confirmed = analyses.findAnalysis(inspection.getId()).orElseThrow();
+        assertThat(dashboard.getSummary().reviewPendingCount()).isEqualTo(1);
+        assertThat(dashboard.getSummary().cautionCount()).isZero();
+        AiAnalysis confirmed = transactions.execute(tx -> {
+            assertThat(analyses.findAnalysis(inspection.getId()).orElseThrow().getReviewStatus())
+                    .isEqualTo(AnalysisReviewStatus.PENDING_REVIEW);
+            AiAnalysisConfirmForm form = AiAnalysisConfirmForm.from(original);
+            form.setSummary("현장 재확인");
+            form.setRiskLevel(RiskLevel.WARNING);
+            form.setAbnormalityType("누수");
+            form.setRecommendedAction("밸브 점검");
+            analyses.confirm(inspection.getId(), original.getId(), form);
+            return analyses.findAnalysis(inspection.getId()).orElseThrow();
+        });
         assertThat(confirmed.getReviewStatus()).isEqualTo(AnalysisReviewStatus.CONFIRMED);
         assertThat(confirmed.getConfirmedAt()).isNotNull();
         assertThat(confirmed.getConfirmedSummary()).isEqualTo("현장 재확인");
@@ -76,10 +95,17 @@ class AiAnalysisReviewTest {
                 .andExpect(content().string(containsString("현장 재확인")))
                 .andExpect(content().string(not(containsString("검토 결과 확정"))));
 
-        mvc.perform(get("/analyses").param("riskLevel", "CAUTION").param("size", "1"))
+        mvc.perform(get("/analyses").param("reviewStatus", "CONFIRMED").param("riskLevel", "WARNING").param("size", "1"))
                 .andExpect(content().string(containsString(original.getSummary())));
-        mvc.perform(get("/analyses").param("riskLevel", "WARNING"))
+        mvc.perform(get("/analyses").param("riskLevel", "CAUTION"))
                 .andExpect(content().string(not(containsString(original.getSummary()))));
+
+        long listed = analyses.findAnalysisPage(RiskLevel.WARNING, AnalysisReviewStatus.CONFIRMED,
+                PageRequest.of(0, 1)).getTotalElements();
+        assertThat(listed).isEqualTo(1);
+        assertThat(dashboard.getSummary().warningCount()).isEqualTo(listed);
+        assertThat(dashboard.getSummary().reviewPendingCount()).isZero();
+        mvc.perform(get("/")).andExpect(content().string(containsString("reviewStatus=CONFIRMED&amp;riskLevel=WARNING")));
 
         mvc.perform(confirmRequest().param("summary", "두 번째 요청").param("riskLevel", "NORMAL")
                         .param("abnormalityType", "없음").param("recommendedAction", "관찰"))
@@ -87,6 +113,17 @@ class AiAnalysisReviewTest {
         AiAnalysis reread = analyses.findAnalysis(inspection.getId()).orElseThrow();
         assertThat(reread.getConfirmedSummary()).isEqualTo(confirmed.getConfirmedSummary());
         assertThat(reread.getConfirmedAt()).isEqualTo(confirmed.getConfirmedAt());
+    }
+
+    @Test
+    void 검토_폼을_확정하면_상세로_돌아가고_확정값이_보인다() throws Exception {
+        String detail = "/inspections/" + inspection.getId();
+        mvc.perform(confirmRequest().param("summary", "현장 확인 완료").param("riskLevel", "WARNING")
+                        .param("abnormalityType", "누수").param("recommendedAction", "연결부 확인"))
+                .andExpect(redirectedUrl(detail));
+        mvc.perform(get(detail))
+                .andExpect(content().string(containsString("사용자 검토·확정 완료")))
+                .andExpect(content().string(containsString("현장 확인 완료")));
     }
 
     @Test

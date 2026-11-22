@@ -3,13 +3,12 @@ package com.kjune922.waterapi.analysis;
 import com.kjune922.waterapi.domain.RiskLevel;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
-
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Optional;
 
 public interface AiAnalysisRepository extends JpaRepository<AiAnalysis, Long> {
@@ -34,15 +33,21 @@ public interface AiAnalysisRepository extends JpaRepository<AiAnalysis, Long> {
     // 특정 점검일지의 분석 결과 조회
     Optional<AiAnalysis> findByInspectionReportId(Long inspectionReportId);
 
-    // 특정 위험도의 AI분석 결과 조회
-    List<AiAnalysis> findAllByRiskLevel(RiskLevel riskLevel);
-
-    // 페이지 조회 메소드 추가
-    Page<AiAnalysis> findAllByRiskLevel(RiskLevel riskLevel, Pageable pageable);
+    @EntityGraph(attributePaths = {"inspectionReport", "inspectionReport.facility"})
+    @Query("""
+            select a from AiAnalysis a
+            where (:status is null or a.reviewStatus = :status)
+              and (:risk is null or (a.reviewStatus = CONFIRMED and a.confirmedRiskLevel = :risk)
+                   or (a.reviewStatus = PENDING_REVIEW and a.riskLevel = :risk))
+            order by a.analyzedAt desc, a.id desc
+            """)
+    Page<AiAnalysis> search(RiskLevel risk, AnalysisReviewStatus status, Pageable pageable);
 
     // 점검일지 삭제 메소드 추가
     void deleteByInspectionReport_Id(Long inspectionId);
 
     // 위험도에따른 총집계하는 메소드 추가
-    long countByRiskLevel(RiskLevel riskLevel);
+    long countByReviewStatusAndConfirmedRiskLevel(AnalysisReviewStatus status, RiskLevel riskLevel);
+
+    long countByReviewStatus(AnalysisReviewStatus status);
 }

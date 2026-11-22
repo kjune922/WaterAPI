@@ -53,7 +53,7 @@
 
         <td><span class="badge" th:classappend="${inspection.processingStatus}" th:text="${inspection.processingStatus.description}"></span></td>
 
-        <td th:text="${inspection.content}"></td>
+        <td th:text="${inspection.listDescription}"></td>
 
         <td>
             <a th:href="@{/inspections/{id}(id=${inspection.id})}">

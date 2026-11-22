@@ -6,8 +6,8 @@ import lombok.RequiredArgsConstructor;
 @Getter
 @RequiredArgsConstructor
 public enum AnalysisReviewStatus {
-    PENDING_REVIEW("검토 대기"),
-    CONFIRMED("확정");
+    PENDING_REVIEW("AI 분석 완료 · 사용자 검토 대기 중"),
+    CONFIRMED("사용자 검토·확정 완료");
 
     private final String description;
 }

@@ -58,6 +58,10 @@ public class AiAnalysis {
 
     private LocalDateTime confirmedAt;
 
+    public RiskLevel getDisplayRisk() {
+        return reviewStatus == AnalysisReviewStatus.CONFIRMED ? confirmedRiskLevel : riskLevel;
+    }
+
     public AiAnalysis(InspectionReport inspectionReport, String summary, String abnormalityType, RiskLevel riskLevel, String recommendedAction, LocalDateTime analyzedAt) {
         this.inspectionReport = inspectionReport;
         this.summary = summary;

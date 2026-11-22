@@ -3,8 +3,8 @@ package com.kjune922.waterapi.analysis;
 import com.kjune922.waterapi.domain.RiskLevel;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -21,18 +21,22 @@ public class AiAnalysisController {
 
     @GetMapping
     public String analyses(
-            @RequestParam(value = "riskLevel", required = false)RiskLevel riskLevel,
-            @PageableDefault(size = 10, sort = "analyzedAt", direction = Sort.Direction.DESC)
+            @RequestParam(value = "riskLevel", required = false) RiskLevel riskLevel,
+            @RequestParam(required = false) AnalysisReviewStatus reviewStatus,
+            @PageableDefault(size = 10)
             Pageable pageable,
             Model model
     ){
 
-        Page<AiAnalysis> analyses = aiAnalysisService.findAnalysisPage(riskLevel, pageable);
+        Page<AiAnalysis> analyses = aiAnalysisService.findAnalysisPage(riskLevel, reviewStatus,
+                PageRequest.of(pageable.getPageNumber(), pageable.getPageSize()));
 
         model.addAttribute("analyses", analyses);
         model.addAttribute("riskLevels", RiskLevel.values());
         model.addAttribute("selectedRiskLevel", riskLevel);
 
+        model.addAttribute("reviewStatuses", AnalysisReviewStatus.values());
+        model.addAttribute("selectedStatus", reviewStatus);
         return "analyses/list";
     }
 }

@@ -41,6 +41,9 @@ class AiAnalysisServiceTest {
     @Mock
     private InspectionAiClient inspectionAiClient;
 
+    @Mock
+    private AnalysisResultWriter writer;
+
     @InjectMocks
     private AiAnalysisService aiAnalysisService;
 
@@ -66,7 +69,7 @@ class AiAnalysisServiceTest {
                         "베어링과 흡입구를 점검하세요."
                 );
 
-        given(inspectionReportRepository.findById(1L))
+        given(inspectionReportRepository.findWithAnswers(1L))
                 .willReturn(Optional.of(inspectionReport));
 
         given(aiAnalysisRepository
@@ -77,6 +80,10 @@ class AiAnalysisServiceTest {
                 inspectionReport.getContent()
         )).willReturn(response);
 
+        given(inspectionReportRepository.lockRevision(1L)).willReturn(Optional.of(0L));
+        given(inspectionReportRepository.getReferenceById(1L)).willReturn(inspectionReport);
+        given(writer.save(1L, 0L, response)).willAnswer(invocation ->
+                new AnalysisResultWriter(inspectionReportRepository, aiAnalysisRepository).save(1L, 0L, response));
         given(aiAnalysisRepository.save(any(AiAnalysis.class)))
                 .willAnswer(invocation ->
                         invocation.getArgument(0));
@@ -116,7 +123,7 @@ class AiAnalysisServiceTest {
                 LocalDate.of(2026, 9, 11)
         );
 
-        given(inspectionReportRepository.findById(1L))
+        given(inspectionReportRepository.findWithAnswers(1L))
                 .willReturn(Optional.of(inspectionReport));
 
         given(aiAnalysisRepository
@@ -137,7 +144,7 @@ class AiAnalysisServiceTest {
 
     @Test
     void 존재하지_않는_점검일지는_분석할_수_없다() {
-        given(inspectionReportRepository.findById(999L))
+        given(inspectionReportRepository.findWithAnswers(999L))
                 .willReturn(Optional.empty());
 
         assertThatThrownBy(() ->
@@ -151,29 +158,16 @@ class AiAnalysisServiceTest {
 
     @Test
     void 위험도로_AI분석_결과_조회() {
-        given(aiAnalysisRepository.findAllByRiskLevel(RiskLevel.WARNING))
-                .willReturn(List.of());
-
-        List<AiAnalysis> result = aiAnalysisService.findAnalysisByRiskLevel(RiskLevel.WARNING);
-
-        assertThat(result).isEmpty();
-
-        verify(aiAnalysisRepository).findAllByRiskLevel(RiskLevel.WARNING);
+        given(aiAnalysisRepository.search(RiskLevel.WARNING, null, Pageable.unpaged())).willReturn(Page.empty());
+        assertThat(aiAnalysisService.findAnalysisByRiskLevel(RiskLevel.WARNING)).isEmpty();
+        verify(aiAnalysisRepository).search(RiskLevel.WARNING, null, Pageable.unpaged());
     }
 
     @Test
     void 위험도_조건이_없으면_AI분석_결과를_전체조회한다() {
-        given(aiAnalysisRepository.findAll())
-                .willReturn(List.of());
-
-        List<AiAnalysis> result =
-                aiAnalysisService.findAnalysisByRiskLevel(null);
-
-        assertThat(result).isEmpty();
-
-        verify(aiAnalysisRepository).findAll();
-        verify(aiAnalysisRepository, never())
-                .findAllByRiskLevel(any());
+        given(aiAnalysisRepository.search(null, null, Pageable.unpaged())).willReturn(Page.empty());
+        assertThat(aiAnalysisService.findAnalysisByRiskLevel(null)).isEmpty();
+        verify(aiAnalysisRepository).search(null, null, Pageable.unpaged());
     }
 
     @Test
@@ -183,16 +177,16 @@ class AiAnalysisServiceTest {
 
         Page<AiAnalysis> page = new PageImpl<>(List.of());
 
-        given(aiAnalysisRepository.findAll(pageable))
+        given(aiAnalysisRepository.search(null, null, pageable))
                 .willReturn(page);
 
-        Page<AiAnalysis> result = aiAnalysisService.findAnalysisPage(null,pageable);
+        Page<AiAnalysis> result = aiAnalysisService.findAnalysisPage(null, null, pageable);
 
         assertThat(result).isEmpty();
 
-        verify(aiAnalysisRepository).findAll(pageable);
+        verify(aiAnalysisRepository).search(null, null, pageable);
         verify(aiAnalysisRepository, never())
-                .findAllByRiskLevel(any(RiskLevel.class), any(Pageable.class));
+                .search(any(RiskLevel.class), any(), any(Pageable.class));
     }
 
     @Test
@@ -201,14 +195,14 @@ class AiAnalysisServiceTest {
         Pageable pageable = PageRequest.of(0,10);
         Page<AiAnalysis> page = new PageImpl<>(List.of());
 
-        given(aiAnalysisRepository.findAllByRiskLevel(RiskLevel.WARNING, pageable))
+        given(aiAnalysisRepository.search(RiskLevel.WARNING, null, pageable))
                 .willReturn(page);
 
-        Page<AiAnalysis> result = aiAnalysisService.findAnalysisPage(RiskLevel.WARNING, pageable);
+        Page<AiAnalysis> result = aiAnalysisService.findAnalysisPage(RiskLevel.WARNING, null, pageable);
 
         assertThat(result).isEmpty();
 
-        verify(aiAnalysisRepository).findAllByRiskLevel(RiskLevel.WARNING, pageable);
+        verify(aiAnalysisRepository).search(RiskLevel.WARNING, null, pageable);
 
         verify(aiAnalysisRepository, never()).findAll(any(Pageable.class));
     }
@@ -222,6 +216,7 @@ class AiAnalysisServiceTest {
         assertThatThrownBy(() -> aiAnalysisService.analyzeInspection(1L))
                 .isInstanceOf(com.kjune922.waterapi.exception.OpenAiAnalysisException.class);
 
+        verifyNoInteractions(writer);
         verify(aiAnalysisRepository, never()).save(any(AiAnalysis.class));
     }
 
@@ -234,6 +229,7 @@ class AiAnalysisServiceTest {
         assertThatThrownBy(() -> aiAnalysisService.analyzeInspection(1L))
                 .isInstanceOf(com.kjune922.waterapi.exception.OpenAiAnalysisException.class);
 
+        verifyNoInteractions(writer);
         verify(aiAnalysisRepository, never()).save(any(AiAnalysis.class));
     }
 
@@ -253,7 +249,7 @@ class AiAnalysisServiceTest {
     private InspectionReport prepareUnanalyzedReport() {
         Facility facility = new Facility("테스트 펌프", FacilityType.PUMP, "테스트 시설");
         InspectionReport report = new InspectionReport(facility, "진동 발생", LocalDate.of(2026, 11, 16));
-        given(inspectionReportRepository.findById(1L)).willReturn(Optional.of(report));
+        given(inspectionReportRepository.findWithAnswers(1L)).willReturn(Optional.of(report));
         given(aiAnalysisRepository.existsByInspectionReportId(1L)).willReturn(false);
         return report;
     }
@@ -264,12 +260,13 @@ class AiAnalysisServiceTest {
     void 무의미한_입력은_AI를_호출하거나_저장하지_않는다(String content) {
         InspectionReport report = mock(InspectionReport.class);
         given(report.getContent()).willReturn(content);
-        given(inspectionReportRepository.findById(1L)).willReturn(Optional.of(report));
+        given(inspectionReportRepository.findWithAnswers(1L)).willReturn(Optional.of(report));
         given(aiAnalysisRepository.existsByInspectionReportId(1L)).willReturn(false);
 
         assertThatThrownBy(() -> aiAnalysisService.analyzeInspection(1L))
                 .isInstanceOf(IllegalArgumentException.class);
         verifyNoInteractions(inspectionAiClient);
+        verifyNoInteractions(writer);
         verify(aiAnalysisRepository, never()).save(any(AiAnalysis.class));
     }
 
@@ -279,6 +276,7 @@ class AiAnalysisServiceTest {
         given(inspectionAiClient.analyze(any())).willThrow(new IllegalArgumentException("관찰 정보가 부족합니다."));
         assertThatThrownBy(() -> aiAnalysisService.analyzeInspection(1L))
                 .isInstanceOf(IllegalArgumentException.class);
+        verifyNoInteractions(writer);
         verify(aiAnalysisRepository, never()).save(any(AiAnalysis.class));
     }
 }

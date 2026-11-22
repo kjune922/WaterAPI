@@ -25,11 +25,23 @@
     <dl class="facts">
         <div><dt>점검일지 ID</dt><dd th:text="${inspection.id}"></dd></div>
         <div><dt>시설 이름</dt><dd th:text="${inspection.facility.name}"></dd></div>
-        <div><dt>시설 유형</dt><dd th:text="${inspection.facility.facilityType}"></dd></div>
+        <div><dt>시설 유형</dt><dd th:text="${inspection.checklist ? inspection.recordedType : inspection.facility.facilityType}"></dd></div>
         <div><dt>시설 위치</dt><dd th:text="${inspection.facility.location}"></dd></div>
         <div><dt>점검 일자</dt><dd th:text="${inspection.inspectionDate}"></dd></div>
     </dl>
-    <p class="source-text" th:text="${inspection.content}"></p>
+    <div th:if="${inspection.checklist}">
+        <p>점검자 (직접 입력) · <span th:text="${inspection.inspectorName}"></span></p>
+        <dl class="reading">
+            <th:block th:each="answer : ${inspection.answers}">
+                <dt th:text="${answer.label}"></dt>
+                <dd><strong th:text="${answer.result.label}"></strong> <span th:text="${answer.reason}"></span></dd>
+            </th:block>
+            <dt>특이사항</dt><dd th:text="${inspection.notes}"></dd>
+            <dt>실시한 조치</dt><dd th:text="${inspection.actionTaken}"></dd>
+        </dl>
+        <p th:replace="~{fragments/checklist-source :: source(${inspection.recordedType})}"></p>
+    </div>
+    <p th:unless="${inspection.checklist}" class="source-text" th:text="${inspection.content}"></p>
     <form class="filters" th:action="@{/inspections/{id}/status(id=${inspection.id})}"
           method="post">
 
@@ -48,13 +60,14 @@
 </section>
 <div class="section-heading">
     <h2>AI 분석 결과</h2>
+    <span th:replace="~{fragments/header :: stubMode}"></span>
     <span th:if="${analysis != null}" class="badge" th:classappend="${analysis.reviewStatus}"
           th:text="${analysis.reviewStatus.description}"></span>
 </div>
 <div class="panel" th:if="${analysis == null}">
-    <p>아직 AI 분석을 실행하지 않았습니다.</p>
+    <p id="analysis-state" role="status" th:text="${analysisMessage ?: 'AI 분석 전'}"></p>
     <form th:action="@{/inspections/{id}/analysis(id=${inspection.id})}"
-          method="post">
+          method="post" onsubmit="this.querySelector('button').disabled=true; document.getElementById('analysis-state').textContent='AI 분석 중'">
         <button type="submit">AI 분석 실행</button>
     </form>
 </div>

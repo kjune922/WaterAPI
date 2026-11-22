@@ -12,10 +12,10 @@ import com.kjune922.waterapi.inspection.InspectionReportRepository;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
@@ -32,42 +32,22 @@ public class AiAnalysisService {
     private final InspectionReportRepository inspectionReportRepository;
     private final AiAnalysisRepository aiAnalysisRepository;
     private final InspectionAiClient inspectionAiClient;
+    private final AnalysisResultWriter resultWriter;
 
-
-    @Transactional
+    @Transactional(propagation = Propagation.NEVER)
     public AiAnalysis analyzeInspection(Long inspectionReportId) {
-        InspectionReport inspectionReport = inspectionReportRepository.findById(inspectionReportId)
+        InspectionReport inspectionReport = inspectionReportRepository.findWithAnswers(inspectionReportId)
                 .orElseThrow(() -> new ResourceNotFoundException("점검일지를 찾을 수 없습니다."));
 
-        // 이미있으면?
         if(aiAnalysisRepository.existsByInspectionReportId(inspectionReportId)){
             throw new DuplicateAnalysisException("이미 AI 분석이 완료된 점검일지입니다.");
         }
 
-        validateInspectionContent(inspectionReport.getContent());
-
-        InspectionAnalysisResponse response = inspectionAiClient.analyze(inspectionReport.getContent());
-
+        long revision = inspectionReport.getInputRevision();
+        String input = AnalysisInput.from(inspectionReport);
+        InspectionAnalysisResponse response = inspectionAiClient.analyze(input);
         validateResponse(response);
-
-        AiAnalysis aiAnalysis = new AiAnalysis(
-                inspectionReport,
-                response.getSummary(),
-                response.getAbnormalityType(),
-                response.getRiskLevel(),
-                response.getRecommendedAction(),
-                LocalDateTime.now()
-        );
-
-        return aiAnalysisRepository.save(aiAnalysis);
-    }
-
-    // 형식상 명백히 무의미한 입력만 차단한다. 내용의 충분성은 AI 응답에서 별도로 확인한다.
-    private void validateInspectionContent(String content) {
-        String letters = content == null ? "" : content.replaceAll("[^가-힣a-zA-Z]", "");
-        if (letters.length() < 2 || letters.matches("(.)\\1*")) {
-            throw new IllegalArgumentException("시설 상태나 관찰한 이상을 구체적으로 입력한 뒤 분석해 주세요.");
-        }
+        return resultWriter.save(inspectionReportId, revision, response);
     }
 
     // 외부 시스템의 응답도 DB 제약과 업무 기준을 만족해야 저장한다.
@@ -103,21 +83,11 @@ public class AiAnalysisService {
         return aiAnalysisRepository.findByInspectionReportId(inspectionReportId);
     }
 
-    public List<AiAnalysis> findAnalysisByRiskLevel(RiskLevel riskLevel){
-
-        if(riskLevel == null){
-            return aiAnalysisRepository.findAll();
-        }
-        return aiAnalysisRepository.findAllByRiskLevel(riskLevel);
+    public List<AiAnalysis> findAnalysisByRiskLevel(RiskLevel riskLevel) {
+        return findAnalysisPage(riskLevel, null, Pageable.unpaged()).getContent();
     }
 
-    // 페이지네이션 구현하는 메소드 추가
-    public Page<AiAnalysis> findAnalysisPage(RiskLevel riskLevel, Pageable pageable){
-        if(riskLevel == null){
-            return aiAnalysisRepository.findAll(pageable);
-        }
-
-        return aiAnalysisRepository.findAllByRiskLevel(riskLevel,pageable);
+    public Page<AiAnalysis> findAnalysisPage(RiskLevel riskLevel, AnalysisReviewStatus status, Pageable pageable) {
+        return aiAnalysisRepository.search(riskLevel, status, pageable);
     }
-
 }

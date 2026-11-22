@@ -3,38 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AI 분석 결과 목록 · AI 분석 위험도 · WaterAPI</title>
+    <title>AI 분석 결과 목록 · WaterAPI</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
 </head>
 <body>
 <header th:replace="~{fragments/header :: header('analyses')}"></header>
 <main id="main">
-<div class="page-heading"><h1>AI 분석 결과 목록 · AI 분석 위험도</h1></div>
-<div class="filters">
-    <strong>AI 분석 위험도 필터</strong>
-    <a th:classappend="${selectedRiskLevel == null ? 'active' : ''}" th:href="@{/analyses}">
-        전체
-    </a>
+<div class="page-heading"><h1>AI 분석 결과 목록</h1><span th:replace="~{fragments/header :: stubMode}"></span></div>
+<form class="filters" th:action="@{/analyses}" method="get">
+    <label for="riskLevel">표시 위험도</label>
+    <select name="riskLevel" id="riskLevel">
+        <option value="">전체</option>
+        <option th:each="level : ${riskLevels}" th:value="${level}" th:text="${level.description}"
+                th:selected="${level == selectedRiskLevel}"></option>
+    </select>
+    <label for="reviewStatus">검토 상태</label>
+    <select name="reviewStatus" id="reviewStatus">
+        <option value="">전체</option>
+        <option th:each="status : ${reviewStatuses}" th:value="${status}" th:text="${status.description}"
+                th:selected="${status == selectedStatus}"></option>
+    </select>
+    <input type="hidden" name="size" th:value="${analyses.size}">
+    <button type="submit">조회</button>
+</form>
 
-    <span th:each="riskLevel : ${riskLevels}">
-        <a th:classappend="${riskLevel == selectedRiskLevel ? 'active' : ''}" th:href="@{/analyses(riskLevel=${riskLevel})}"
-           th:text="${riskLevel.description}">
-        </a>
-    </span>
-</div>
-
-<div class="table-scroll" tabindex="0" role="region" aria-label="AI 분석 결과 목록 · AI 분석 위험도 표">
+<p>전체 <strong th:text="${analyses.totalElements}"></strong>건</p>
+<div class="table-scroll" tabindex="0" role="region" aria-label="AI 분석 결과 목록 표">
 <table>
     <thead>
     <tr>
         <th>분석 ID</th>
         <th>시설 이름</th>
         <th>점검 내용</th>
-        <th>요약</th>
-        <th>이상 유형</th>
-        <th>AI 분석 위험도</th>
+        <th>AI 요약</th>
+        <th>AI 이상 유형</th>
+        <th>표시 위험도</th>
         <th>검토 상태</th>
-        <th>권장 조치</th>
+        <th>AI 권장 조치</th>
         <th>분석 시각</th>
     </tr>
     </thead>
@@ -48,7 +53,7 @@
 
         <td>
             <a th:href="@{/inspections/{id}(id=${analysis.inspectionReport.id})}"
-               th:text="${analysis.inspectionReport.content}">
+               th:text="${analysis.inspectionReport.listDescription}">
             </a>
         </td>
 
@@ -56,7 +61,8 @@
 
         <td th:text="${analysis.abnormalityType}"></td>
 
-        <td><span class="badge" th:classappend="${analysis.riskLevel}" th:text="${analysis.riskLevel.description}"></span></td>
+        <td><span class="badge" th:classappend="${analysis.displayRisk}" th:text="${analysis.displayRisk.description}"></span>
+            <span th:text="${analysis.reviewStatus.name() == 'CONFIRMED' ? '사용자 확정' : 'AI 제안'}"></span></td>
         <td><span class="badge" th:classappend="${analysis.reviewStatus}" th:text="${analysis.reviewStatus.description}"></span></td>
 
         <td th:text="${analysis.recommendedAction}"></td>
@@ -78,7 +84,7 @@
        th:href="@{/analyses(
             page=${analyses.number - 1},
             size=${analyses.size},
-            riskLevel=${selectedRiskLevel}
+            riskLevel=${selectedRiskLevel}, reviewStatus=${selectedStatus}
        )}">
         이전
     </a>
@@ -94,7 +100,7 @@
            th:href="@{/analyses(
                 page=${pageNumber},
                 size=${analyses.size},
-                riskLevel=${selectedRiskLevel}
+                riskLevel=${selectedRiskLevel}, reviewStatus=${selectedStatus}
            )}"
            th:text="${pageNumber + 1}">
         </a>
@@ -104,7 +110,7 @@
        th:href="@{/analyses(
             page=${analyses.number + 1},
             size=${analyses.size},
-            riskLevel=${selectedRiskLevel}
+            riskLevel=${selectedRiskLevel}, reviewStatus=${selectedStatus}
        )}">
         다음
     </a>
