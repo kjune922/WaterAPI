@@ -69,6 +69,20 @@ public class InspectionReport {
 
     public List<ChecklistItem> savedItems() {
         return answers.stream().map(a -> new ChecklistItem(a.getCode(), a.getLabel())).toList();
+
+        /**
+         *     List<ChecklistItem> items = new ArrayList<>();
+         *
+         *     for (InspectionAnswer a : answers) {
+         *         ChecklistItem item = new ChecklistItem(
+         *                 a.getCode(),
+         *                 a.getLabel()
+         *         );
+         *         items.add(item);
+         *     }
+         *
+         *     return items;
+         */
     }
 
     public InspectionReport(Facility facility, ChecklistForm form) {

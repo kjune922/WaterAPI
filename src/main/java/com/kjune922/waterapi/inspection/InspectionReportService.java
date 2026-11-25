@@ -48,7 +48,9 @@ public class InspectionReportService {
     public void updateChecklist(Long id, @Valid ChecklistForm form) {
 
         InspectionReport report = lockedReport(id);
+
         if (!report.isChecklist()) throw new IllegalArgumentException("자유서술형 점검일지입니다.");
+
         validateChecklist(form, report.savedItems());
         report.updateChecklist(form);
         aiAnalysisRepository.deleteByInspectionReport_Id(id);

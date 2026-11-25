@@ -209,7 +209,7 @@ public class InspectionReportController {
         try {
             aiAnalysisService.analyzeInspection(id);
         } catch (OpenAiAnalysisException failure) {
-            redirect.addFlashAttribute("analysisMessage", "AI 분석 실패 · 다시 시도해 주세요");
+            redirect.addFlashAttribute("analysisMessage", "AI 분석 실패!! 다시 시도해 주세요");
         } catch (IllegalArgumentException insufficient) {
             redirect.addFlashAttribute("analysisMessage", "입력 보완 필요 · " + insufficient.getMessage());
         }
