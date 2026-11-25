@@ -23,9 +23,9 @@ public class InspectionAnswer {
     private String reason;
 
     public InspectionAnswer(ChecklistItem item, ObservationResult result, String reason) {
-        this.code = item.code();
-        this.label = item.label();
-        this.result = result;
-        this.reason = reason;
+        this.code = item.code(); // 질문 코드
+        this.label = item.label(); // 질문 종류(누수인지... 뭔지)
+        this.result = result; // 선택한 결과
+        this.reason = reason; // 입력한 사유
     }
 }

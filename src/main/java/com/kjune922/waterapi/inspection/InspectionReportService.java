@@ -34,20 +34,25 @@ public class InspectionReportService {
 
     @Transactional
     public InspectionReport registerChecklist(Long facilityId, @Valid ChecklistForm form) {
+
         Facility facility = facilityRepository.findById(facilityId)
                 .orElseThrow(() -> new ResourceNotFoundException("시설을 찾을 수 없습니다."));
+
         entityManager.refresh(facility, LockModeType.PESSIMISTIC_READ);
         validateChecklist(form, ChecklistItem.forType(facility.getFacilityType()));
+
         return inspectionReportRepository.save(new InspectionReport(facility, form));
     }
 
     @Transactional
     public void updateChecklist(Long id, @Valid ChecklistForm form) {
+
         InspectionReport report = lockedReport(id);
         if (!report.isChecklist()) throw new IllegalArgumentException("자유서술형 점검일지입니다.");
         validateChecklist(form, report.savedItems());
         report.updateChecklist(form);
         aiAnalysisRepository.deleteByInspectionReport_Id(id);
+
     }
 
     private void validateChecklist(ChecklistForm form, List<ChecklistItem> items) {

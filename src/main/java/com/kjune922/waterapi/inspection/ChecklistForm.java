@@ -50,6 +50,24 @@ public class ChecklistForm {
     public List<InspectionAnswer> answers(List<ChecklistItem> items) {
         return items.stream().map(item -> new InspectionAnswer(item, results.get(item.code()),
                 Objects.toString(reasons.get(item.code()), "").strip())).toList();
+
+        /**
+         *     for (ChecklistItem item : items) {
+         *         // 질문 코드에 해당하는 선택 결과
+         *         ObservationResult result = results.get(item.code());
+         *
+         *         // 질문 코드에 해당하는 사유
+         *         String reason = Objects.toString(
+         *                 reasons.get(item.code()), ""
+         *         ).strip();
+         *
+         *         // 질문 + 결과 + 사유를 하나의 객체로 묶음
+         *         InspectionAnswer answer =
+         *                 new InspectionAnswer(item, result, reason);
+         *
+         *         answerList.add(answer);
+         */
+
     }
 
     public static ChecklistForm from(InspectionReport report) {
